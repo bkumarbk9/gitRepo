@@ -1,0 +1,8 @@
+D:\bk\cp\cloudsaas\saasSpreadSheet\saasSpreadSheet\saasSpreadSheet\bin\Debug\saasSpreadSheet.exe.config
+D:\bk\cp\cloudsaas\saasSpreadSheet\saasSpreadSheet\saasSpreadSheet\bin\Debug\saasSpreadSheet.exe
+D:\bk\cp\cloudsaas\saasSpreadSheet\saasSpreadSheet\saasSpreadSheet\bin\Debug\saasSpreadSheet.pdb
+D:\bk\cp\cloudsaas\saasSpreadSheet\saasSpreadSheet\saasSpreadSheet\bin\Debug\webSocket.dll
+D:\bk\cp\cloudsaas\saasSpreadSheet\saasSpreadSheet\saasSpreadSheet\bin\Debug\webSocket.pdb
+D:\bk\cp\cloudsaas\saasSpreadSheet\saasSpreadSheet\saasSpreadSheet\obj\Debug\saasSpreadSheet.exe
+D:\bk\cp\cloudsaas\saasSpreadSheet\saasSpreadSheet\saasSpreadSheet\obj\Debug\saasSpreadSheet.pdb
+D:\bk\cp\cloudsaas\saasSpreadSheet\saasSpreadSheet\saasSpreadSheet\obj\Debug\saasSpreadSheet.csprojResolveAssemblyReference.cache
