@@ -1,6 +1,6 @@
-Online Spreadsheet — Low‑Latency HTML WebSocket Client
+# Online Spreadsheet — Low‑Latency HTML WebSocket Client
 
-Overview
+# Overview
 Online Spreadsheet — a low‑latency HTML WebSocket Client
 
     This project demonstrates how to build a lightweight, real‑time spreadsheet using:
@@ -15,14 +15,14 @@ Online Spreadsheet — a low‑latency HTML WebSocket Client
 
     Low‑latency messaging patterns
 
-Features
+# Features
 Real‑time cell updates across multiple clients
 WebSocket‑based push messaging
 Simple HTML UI
 Lightweight server implementation
 Demonstrates low‑latency synchronization techniques
 
-Fully open‑source and self‑contained
+# Fully source is self‑contained
 📁 Repository Structure
 Code
 /src
@@ -35,11 +35,11 @@ Code
 /docs
     Supporting documentation
 
-LICENSE
+# LICENSE
 Licensed under the GNU General Public License v3 or (at your option) any later version.
 See LICENSE for the full license text.
 
-Getting Started
+# Getting Started
 1. Clone the repository
 bash
 git clone https://github.com/<your-username>/<your-repo>.git
@@ -53,19 +53,13 @@ node server.js
 Open index.html in your browser.
 Open multiple browser windows to see real‑time updates.
 
- Article Preservation
+ # Article Preservation
 The full article text is included in:
 
-Code
-/article/OnlineSpreadsheet.pdf
+# Code
+/article/
 This ensures the content remains accessible even if the archived link disappears.
 
-Contributing
-This repository is primarily for educational purposes.
-
-License
-This project is licensed under the MIT License.
-
-Acknowledgments
+# Acknowledgments
 Originally published on CodeProject (now defunct).
 Thanks to the Wayback Machine for preserving the article snapshot
