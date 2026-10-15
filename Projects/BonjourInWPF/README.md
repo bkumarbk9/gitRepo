@@ -53,6 +53,10 @@ Both frameworks are performant, but WPF excels in achieving seamless animations 
 
 This project is done as a prototype or sample.  So code brevity is traded for writing full fledged professional code.  This allows anyone to learn the pattern, concept with ease instead of spending time to skip long error/exception handling, secure programming etc,  
 
+LICENSE
+Licensed under the GNU General Public License v3 or (at your option) any later version.
+See LICENSE for the full license text.
+
 ## History
  - V1.0 -- 5th May 2024 - First version
  - 
