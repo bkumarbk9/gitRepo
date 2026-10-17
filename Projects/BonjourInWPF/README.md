@@ -53,9 +53,13 @@ Both frameworks are performant, but WPF excels in achieving seamless animations 
 
 This project is done as a prototype or sample.  So code brevity is traded for writing full fledged professional code.  This allows anyone to learn the pattern, concept with ease instead of spending time to skip long error/exception handling, secure programming etc,  
 
-LICENSE
-Licensed under the GNU General Public License v3 or (at your option) any later version.
-See LICENSE for the full license text.
+## License
+Copyright (C) 2024 Bharath K A (bkumarbk9)
+
+Licensed under the GNU Affero General Public License v3.0 only (`AGPL-3.0-only`).
+See [LICENSE](LICENSE) for the full license text.
+
+Third-party components (Telerik UI for WPF, NLog, Zeroconf, System.Reactive and the other libraries in `DemoBinaries` and `src/packages`) remain under their own licenses.
 
 ## History
  - V1.0 -- 5th May 2024 - First version

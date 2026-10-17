@@ -1,0 +1,39 @@
+# Copyright (C) 2026 Bharath K A (bkumarbk9)
+# SPDX-License-Identifier: AGPL-3.0-only
+#
+# Manual API tests for Visual Studio / VS Code (REST Client) / JetBrains HTTP Client.
+# Put a test document named sample.pdf next to this file before running the analyze requests.
+# To test the deployed app, change the host below to your Azure Container Apps URL.
+
+@host = http://localhost:5018
+
+### Health check (not rate limited)
+GET {{host}}/health
+
+### Analyze a PDF (expect 200 with page-by-page JSON)
+POST {{host}}/api/docintel/analyze
+Content-Type: multipart/form-data; boundary=boundary
+
+--boundary
+Content-Disposition: form-data; name="file"; filename="sample.pdf"
+Content-Type: application/pdf
+
+< ./sample.pdf
+--boundary--
+
+### Unsupported file type (expect 400)
+POST {{host}}/api/docintel/analyze
+Content-Type: multipart/form-data; boundary=boundary
+
+--boundary
+Content-Disposition: form-data; name="file"; filename="notes.txt"
+Content-Type: text/plain
+
+This is not a supported document type.
+--boundary--
+
+### No file uploaded (expect 400)
+POST {{host}}/api/docintel/analyze
+Content-Type: multipart/form-data; boundary=boundary
+
+--boundary--

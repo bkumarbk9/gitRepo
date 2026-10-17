@@ -36,8 +36,12 @@ Code
     Supporting documentation
 
 # LICENSE
-Licensed under the GNU General Public License v3 or (at your option) any later version.
-See LICENSE for the full license text.
+Copyright (C) 2024 Bharath K A (bkumarbk9)
+
+Licensed under the GNU Affero General Public License v3.0 only (`AGPL-3.0-only`).
+See [LICENSE](LICENSE) for the full license text.
+
+`src/webSocket/webSocket/muParser.cs` is a third-party wrapper for the muParser library, Copyright (C) 2007-2011 Ingo Berg, and remains under its original MIT license (see the notice at the top of that file).
 
 # Getting Started
 1. Clone the repository
