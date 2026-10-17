@@ -1,7 +1,0 @@
-D:\bk\cp\cloudsaas\saasSpreadSheet\saasSpreadSheet\saasSpreadSheet\bin\Release\saasSpreadSheet.exe.config
-D:\bk\cp\cloudsaas\saasSpreadSheet\saasSpreadSheet\saasSpreadSheet\bin\Release\saasSpreadSheet.exe
-D:\bk\cp\cloudsaas\saasSpreadSheet\saasSpreadSheet\saasSpreadSheet\bin\Release\saasSpreadSheet.pdb
-D:\bk\cp\cloudsaas\saasSpreadSheet\saasSpreadSheet\saasSpreadSheet\obj\Release\saasSpreadSheet.exe
-D:\bk\cp\cloudsaas\saasSpreadSheet\saasSpreadSheet\saasSpreadSheet\obj\Release\saasSpreadSheet.pdb
-D:\bk\cp\cloudsaas\saasSpreadSheet\saasSpreadSheet\saasSpreadSheet\bin\Release\webSocket.dll
-D:\bk\cp\cloudsaas\saasSpreadSheet\saasSpreadSheet\saasSpreadSheet\bin\Release\webSocket.pdb
