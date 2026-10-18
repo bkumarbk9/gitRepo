@@ -32,4 +32,24 @@
     <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.24.2-preview.1" />
   </ItemGroup>
 
+  <!-- Angular client: built on publish and served from wwwroot (works for VS Publish / dotnet publish).
+       The Dockerfile builds the client in its own Node stage and passes BuildClient=false. -->
+  <PropertyGroup>
+    <ClientRoot>$(MSBuildProjectDirectory)\..\AzDocIntelligenceAI.Client\document-extractor\</ClientRoot>
+    <BuildClient Condition="'$(BuildClient)' == ''">true</BuildClient>
+  </PropertyGroup>
+
+  <Target Name="PublishAngularClient" AfterTargets="ComputeFilesToPublish" Condition="'$(BuildClient)' == 'true'">
+    <Exec WorkingDirectory="$(ClientRoot)" Command="npm ci" Condition="!Exists('$(ClientRoot)node_modules')" />
+    <Exec WorkingDirectory="$(ClientRoot)" Command="npx ng build --configuration production" />
+    <ItemGroup>
+      <ClientDistFiles Include="$(ClientRoot)dist\document-extractor\browser\**" />
+      <ResolvedFileToPublish Include="@(ClientDistFiles->'%(FullPath)')" Exclude="@(ResolvedFileToPublish)">
+        <RelativePath>wwwroot\%(RecursiveDir)%(FileName)%(Extension)</RelativePath>
+        <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+        <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+      </ResolvedFileToPublish>
+    </ItemGroup>
+  </Target>
+
 </Project>

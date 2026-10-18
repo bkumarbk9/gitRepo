@@ -27,6 +27,8 @@ namespace BK_AzDocIntelligenceAI
         private const int GlobalDailyLimit = 1000;
         private const string EndpointSetting = "DOC_INTEL_ENDPOINT";
         private const string ApiKeySetting = "DOC_INTEL_APIKEY";
+        private const string CorsOriginsSetting = "CORS_ALLOWED_ORIGINS";
+        private const string DefaultCorsOrigins = "http://localhost:4200";
 
         public static void Main(string[] args)
         {
@@ -42,6 +44,14 @@ namespace BK_AzDocIntelligenceAI
             // Add services to the container.
 
             builder.Services.AddControllers();
+
+            // Browser clients (e.g. the Angular app) need CORS; comma-separated list, e.g. "http://localhost:4200,https://myclient.com"
+            string[] corsOrigins = (builder.Configuration[CorsOriginsSetting] ?? DefaultCorsOrigins)
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            builder.Services.AddCors(o => o.AddDefaultPolicy(p => p
+                .WithOrigins(corsOrigins)
+                .WithMethods("POST")
+                .AllowAnyHeader()));
             builder.Services.Configure<ForwardedHeadersOptions>(o =>
             {
                 o.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
@@ -122,6 +132,9 @@ namespace BK_AzDocIntelligenceAI
                 app.MapOpenApi();
             }
 
+            app.UseDefaultFiles();       // serves the Angular client (wwwroot/index.html) at the site root
+            app.UseStaticFiles();
+            app.UseCors();               // before the rate limiter, so preflight requests don't count against the limits
             app.UseRateLimiter();
             app.MapControllers();
 

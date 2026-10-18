@@ -1,0 +1,26 @@
+<div class="uploader">
+  <h2>Scanned Document Parser</h2>
+<h5>This is AI-powered OCR and extraction tool. Extracts text data from scanned JPG, PDFs or images using the Azure AI model.  When you click 'Convert to JSON' button, it returns  page text, page number, rotation angle, dimensions, unit, paragraphs and average word confidence for each page. **Do Not** process personal data</h5>
+  <div class="controls">
+    <input type="file" (change)="onFileSelected($event)" accept=".pdf,.png,.jpg,.jpeg" />
+
+    <button class="convert" [class.loading]="isLoading()" [attr.aria-busy]="isLoading()"
+            [disabled]="!selectedFile() || isLoading()" (click)="processDocument()">
+      @if (isLoading()) {
+        <span class="spinner" aria-hidden="true"></span>
+      }
+      {{ isLoading() ? 'Extracting...' : 'Convert to JSON' }}
+    </button>
+  </div>
+
+  @if (errorMessage()) {
+    <p class="error">{{ errorMessage() }}</p>
+  }
+
+  @if (extractedJson()) {
+    <div class="result">
+      <h3>Converted Data Result:</h3>
+      <pre>{{ extractedJson() | json }}</pre>
+    </div>
+  }
+</div>

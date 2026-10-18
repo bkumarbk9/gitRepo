@@ -1,0 +1,7 @@
+{
+  "/api": {
+    "target": "https://azdocintelligenceai-app-20261015.whitehill-0f100039.westus2.azurecontainerapps.io",
+    "secure": true,
+    "changeOrigin": true
+  }
+}

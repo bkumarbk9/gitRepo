@@ -22,7 +22,6 @@ namespace BK_AzDocIntelligenceAI.Controllers
     public class HealthController : ControllerBase
     {
         // Not logged on purpose: ACA probes call this every few seconds and would flood the logs
-        [HttpGet("/")]
         [HttpGet("health")]
         [HttpGet]
         public IActionResult Get() => Ok(new { status = "ok", time = DateTime.UtcNow });

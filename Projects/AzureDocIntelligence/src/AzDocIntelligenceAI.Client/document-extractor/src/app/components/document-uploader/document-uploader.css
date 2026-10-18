@@ -1,0 +1,84 @@
+.uploader {
+  box-sizing: border-box;
+  max-width: 800px;
+  padding: 20px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+}
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.controls input[type='file'] {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.error {
+  margin-top: 10px;
+  color: red;
+}
+
+.result {
+  margin-top: 20px;
+  padding: 10px;
+  background: #f4f4f4;
+  border-radius: 4px;
+}
+
+/* Wrap long lines inside the box and scroll large results instead of stretching the page */
+.result pre {
+  margin: 0;
+  max-height: 60vh;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 13px;
+}
+
+.convert {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.convert:disabled {
+  cursor: not-allowed;
+}
+
+/* While Azure AI is working: spinning icon and a "busy" cursor (the page itself stays usable) */
+.convert.loading {
+  cursor: progress;
+}
+
+.spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Users who turn off animations in their OS get a slow pulse instead of a spin */
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+}
+
+@keyframes pulse {
+  50% {
+    opacity: 0.3;
+  }
+}
