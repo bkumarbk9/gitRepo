@@ -21,6 +21,7 @@ A cloud-native ASP.NET Core Web API that sends PDFs and images to **Azure AI Doc
    style="display:inline-block;padding:10px 16px;background:#0078D4;color:white;border-radius:6px;text-decoration:none;font-weight:600;">
    ▶ Try Live Demo
 </a>
+
 **Alternatively..**:
 ```powershell
 curl.exe -s -w "`nHTTP %{http_code}`n" -X POST "https://azdocintelligenceai-app-20261015.whitehill-0f100039.westus2.azurecontainerapps.io/api/docintel/analyze" -F "file=@C:\temp\test.jpg"
