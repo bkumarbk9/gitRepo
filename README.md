@@ -16,12 +16,12 @@ Free demo projects that show how to use different technologies, from cloud AI se
 A cloud-native ASP.NET Core Web API that sends PDFs and images to **Azure AI Document Intelligence** (layout model) and returns clean, page-by-page JSON: text paragraphs, page geometry and OCR confidence. It runs as a container on **Azure Container Apps**, with per-IP rate limiting, upload limits, structured logging and a health endpoint built in.
 
 **Try the live demo**:
-<h3>🚀 Try it Live (Easy Demo)</h3>
-<p>
-  <a href="https://azdocintelligenceai-app-20261015.whitehill-0f100039.westus2.azurecontainerapps.io/" target="_blank">
-    Open Live Demo
-  </a>
-</p>
+<a href="https://azdocintelligenceai-app-20261015.whitehill-0f100039.westus2.azurecontainerapps.io/" 
+   target="_blank" 
+   style="display:inline-block;padding:10px 16px;background:#0078D4;color:white;border-radius:6px;text-decoration:none;font-weight:600;">
+   ▶ Try Live Demo
+</a>
+**Alternatively..**:
 ```powershell
 curl.exe -s -w "`nHTTP %{http_code}`n" -X POST "https://azdocintelligenceai-app-20261015.whitehill-0f100039.westus2.azurecontainerapps.io/api/docintel/analyze" -F "file=@C:\temp\test.jpg"
 ```
