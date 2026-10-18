@@ -22,6 +22,7 @@ A cloud-native ASP.NET Core Web API that sends PDFs and images to **Azure AI Doc
    ▶ Try Live Demo
 </a>
 
+First time it will take a bit to load the page (warm-up) as it is Azure Container app. This means, it works as desired for zero cost cool down deployment technique.   Next time onwards it will be snappy
 **Alternatively..**:
 ```powershell
 curl.exe -s -w "`nHTTP %{http_code}`n" -X POST "https://azdocintelligenceai-app-20261015.whitehill-0f100039.westus2.azurecontainerapps.io/api/docintel/analyze" -F "file=@C:\temp\test.jpg"
