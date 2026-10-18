@@ -7,12 +7,26 @@ A cloud-native ASP.NET Core Web API that sends PDFs and images to **Azure AI Doc
 ![.NET 10](https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet&logoColor=white)
 ![C#](https://img.shields.io/badge/C%23-14-239120?logo=csharp&logoColor=white)
 ![ASP.NET Core](https://img.shields.io/badge/ASP.NET%20Core-Web%20API-512BD4?logo=dotnet&logoColor=white)
+![Angular 22](https://img.shields.io/badge/Angular-22-DD0031?logo=angular&logoColor=white)
 ![Azure AI Document Intelligence](https://img.shields.io/badge/Azure%20AI-Document%20Intelligence-0078D4?logo=microsoftazure&logoColor=white)
 ![Azure Container Apps](https://img.shields.io/badge/Azure-Container%20Apps-0078D4?logo=microsoftazure&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-Linux%20container-2496ED?logo=docker&logoColor=white)
 ![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)
 
-> **Try it live:** `https://azdocintelligenceai-app-20261015.whitehill-0f100039.westus2.azurecontainerapps.io/` (see [API](#api) for usage)
+**Try the live demo**:
+<a href="https://azdocintelligenceai-app-20261015.whitehill-0f100039.westus2.azurecontainerapps.io/" 
+   target="_blank" 
+   style="display:inline-block;padding:10px 16px;background:#0078D4;color:white;border-radius:6px;text-decoration:none;font-weight:600;">
+   ▶ Try Live Demo
+</a>
+
+First time it will take a bit to load the page (warm-up) as it is Azure Container app. This means, it works as desired for zero cost cool down deployment technique.   Next time onwards it will be snappy
+**Alternatively..**:
+```powershell
+curl.exe -s -w "`nHTTP %{http_code}`n" -X POST "https://azdocintelligenceai-app-20261015.whitehill-0f100039.westus2.azurecontainerapps.io/api/docintel/analyze" -F "file=@C:\temp\test.jpg"
+```
+Add `-o C:\temp\result.json` to save the result to a file instead of printing it.
+ (see [API](#api) for usage)
 > The public demo is free and rate limited. Please read [Usage limits](#usage-limits) and [Privacy](#privacy) before uploading.
 
 ---
@@ -58,10 +72,12 @@ A cloud-native ASP.NET Core Web API that sends PDFs and images to **Azure AI Doc
 |---|---|
 | Language and runtime | **C# 14**, **.NET 10** |
 | Web framework | **ASP.NET Core Web API** (controllers) |
+| Web client | **Angular 22** (standalone components, signals, zoneless change detection, built-in `@if` control flow), **TypeScript 6** |
+| Client hosting | Angular build output served as static files from the API's `wwwroot` (same origin as the API, so no CORS needed) |
 | AI service | **Azure AI Document Intelligence**, `prebuilt-layout` model, via the [`Azure.AI.DocumentIntelligence`](https://www.nuget.org/packages/Azure.AI.DocumentIntelligence) SDK 1.0 |
 | Hosting | **Azure Container Apps (ACA)**: serverless containers with HTTPS ingress and scale to zero |
 | Container registry | **Azure Container Registry (ACR)** |
-| Containerization | **Docker** (multi-stage build on the `mcr.microsoft.com/dotnet` images) |
+| Containerization | **.NET SDK container publish** (Visual Studio Publish), or **Docker** (multi-stage build: `node` image for the Angular client, `mcr.microsoft.com/dotnet` images for the API) |
 | Rate limiting | ASP.NET Core built-in **`System.Threading.RateLimiting`** (fixed-window, partitioned by client IP) |
 | Proxy awareness | ASP.NET Core **Forwarded Headers** middleware (real client IP behind ACA ingress) |
 | Logging | **Microsoft.Extensions.Logging** with the JSON console formatter (works with Azure Log Analytics) |
