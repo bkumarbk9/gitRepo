@@ -12,24 +12,33 @@ A cloud-native ASP.NET Core Web API that sends PDFs and images to **Azure AI Doc
 ![Docker](https://img.shields.io/badge/Docker-Linux%20container-2496ED?logo=docker&logoColor=white)
 ![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)
 
-> **Try it live:** `https://azdocintelligenceai-app-20261015.whitehill-0f100039.westus2.azurecontainerapps.io/api/docintel/analyze` (see [API](#api) for usage)
+> **Try it live:** `https://azdocintelligenceai-app-20261015.whitehill-0f100039.westus2.azurecontainerapps.io/` (see [API](#api) for usage)
 > The public demo is free and rate limited. Please read [Usage limits](#usage-limits) and [Privacy](#privacy) before uploading.
 
 ---
 
 ## Table of contents
-- [Features](#features)
-- [Technologies used](#technologies-used)
-- [Architecture](#architecture)
-- [API](#api)
-- [Usage limits](#usage-limits)
-- [Privacy](#privacy)
-- [Getting started](#getting-started)
-- [Deploy to Azure Container Apps](#deploy-to-azure-container-apps)
-- [Logging and monitoring](#logging-and-monitoring)
-- [Project structure](#project-structure)
-- [Roadmap](#roadmap)
-- [License](#license)
+- [Azure AI Document Reader](#azure-ai-document-reader)
+  - [Table of contents](#table-of-contents)
+  - [Features](#features)
+  - [Technologies used](#technologies-used)
+  - [Architecture](#architecture)
+  - [API](#api)
+    - [`POST /api/docintel/analyze`](#post-apidocintelanalyze)
+    - [`GET /health`](#get-health)
+  - [Usage limits](#usage-limits)
+  - [Privacy](#privacy)
+  - [Getting started](#getting-started)
+    - [Prerequisites](#prerequisites)
+    - [Configuration](#configuration)
+    - [Run locally](#run-locally)
+    - [Run in Docker](#run-in-docker)
+  - [Deploy to Azure Container Apps](#deploy-to-azure-container-apps)
+  - [Logging and monitoring](#logging-and-monitoring)
+  - [Project structure](#project-structure)
+  - [Roadmap](#roadmap)
+  - [License](#license)
+    - [Commercial licensing](#commercial-licensing)
 
 ---
 
