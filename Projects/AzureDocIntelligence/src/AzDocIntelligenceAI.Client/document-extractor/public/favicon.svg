@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Document with a scan line: Azure blue tile, white page, folded corner -->
+  <rect width="32" height="32" rx="7" fill="#0078D4"/>
+  <path d="M10 6h8.5L23 10.5V25a1 1 0 0 1-1 1H10a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1z" fill="#fff"/>
+  <path d="M18.5 6v4.5H23z" fill="#9CCBF0"/>
+  <rect x="11.5" y="13" width="9" height="1.6" rx=".8" fill="#0078D4" opacity=".55"/>
+  <rect x="11.5" y="20" width="9" height="1.6" rx=".8" fill="#0078D4" opacity=".55"/>
+  <rect x="11.5" y="23" width="6" height="1.6" rx=".8" fill="#0078D4" opacity=".55"/>
+  <rect x="6" y="16.2" width="20" height="2" rx="1" fill="#50E6FF"/>
+</svg>
