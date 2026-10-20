@@ -58,13 +58,13 @@ Add `-o C:\temp\result.json` to save the result to a file instead of printing it
 
 ## Features
 
-- 📄 **AI-powered OCR and layout analysis.** Extracts paragraphs per page from PDFs and images using the Azure `prebuilt-layout` model.
-- 📊 **Clean JSON output.** Returns page number, rotation angle, dimensions, unit, paragraphs and average word confidence for each page.
-- 🛡️ **Abuse protection.** Limits requests per IP per day, caps total daily traffic, enforces a 2 MB upload limit, allow-lists file types and analyzes at most 3 pages per document.
-- ⚡ **Fully asynchronous.** Uses non-blocking I/O end to end, and analysis is cancelled when the client disconnects.
-- 🔍 **Structured JSON logging.** Every log line of a request is correlated by `RequestId`/`TraceId`. File names and document content are never logged.
-- 🐳 **Containerized.** Multi-stage Linux Docker image, ready for Azure Container Apps, with scale-to-zero support.
-- ❤️ **Health endpoint.** Ready to use for container liveness probes.
+- **AI-powered OCR and layout analysis.** Extracts paragraphs per page from PDFs and images using the Azure `prebuilt-layout` model.
+- **Clean JSON output.** Returns page number, rotation angle, dimensions, unit, paragraphs and average word confidence for each page.
+- **Abuse protection.** Limits requests per IP per day, caps total daily traffic, enforces a 2 MB upload limit, allow-lists file types and analyzes at most 3 pages per document.
+- **Fully asynchronous.** Uses non-blocking I/O end to end, and analysis is cancelled when the client disconnects.
+- **Structured JSON logging.** Every log line of a request is correlated by `RequestId`/`TraceId`. File names and document content are never logged.
+- **Containerized.** Multi-stage Linux Docker image, ready for Azure Container Apps, with scale-to-zero support.
+- **Health endpoint.** Ready to use for container liveness probes.
 
 ## Technologies used
 
