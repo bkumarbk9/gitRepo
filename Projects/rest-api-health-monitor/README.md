@@ -10,6 +10,17 @@ An Angular 22 single-page app that pings a configurable list of endpoints, recor
 ![Vitest](https://img.shields.io/badge/Tested%20with-Vitest-6E9F18?logo=vitest&logoColor=white)
 ![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)
 
+**Try the live demo**:
+<a href="https://gray-cliff-0c3ee300f.3.azurestaticapps.net/" 
+   target="_blank" 
+   style="display:inline-block;padding:10px 16px;background:#0078D4;color:white;border-radius:6px;text-decoration:none;font-weight:600;">
+   ▶ Try Live Demo
+</a>
+
+Hosted on **Azure Static Web Apps** (Free tier), so it loads instantly with no warm-up. The checks run in your browser; open DevTools and add `?logLevel=debug` to the URL to watch them.
+
+![REST API Health Monitor dashboard showing four endpoint cards with status, latency charts, status timelines and an incident banner](doc/img/screenshot.png)
+
 ---
 
 ## Table of contents

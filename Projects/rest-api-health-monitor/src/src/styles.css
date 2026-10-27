@@ -15,4 +15,12 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-/* You can add global styles to this file, and also import other style files */
+/* Global styles. Component styles in app.css are scoped to the component and can't reach <body>. */
+/* Container Layout */
+body {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background-color: #f8f9fa;
+  margin: 0;
+  padding: 20px;
+  color: #212529;
+}
