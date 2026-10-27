@@ -1,0 +1,22 @@
+[
+  {
+    "id": "1",
+    "name": "Mock Test Endpoint (httpbin)",
+    "url": "https://httpbin.org"
+  },
+  {
+    "id": "2",
+    "name": "JSONPlaceholder API",
+    "url": "https://jsonplaceholder.typicode.com/posts/1"
+  },
+  {
+    "id": "3",
+    "name": "GitHub Status",
+    "url": "https://www.githubstatus.com/api/v2/status.json"
+  },
+  {
+    "id": "4",
+    "name": "Google",
+    "url": "https://www.google.com"
+  }
+]
