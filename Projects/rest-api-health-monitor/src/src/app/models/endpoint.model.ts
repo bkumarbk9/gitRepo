@@ -34,6 +34,8 @@ export interface ApiEndpoint {
   status: 'UP' | 'DOWN' | 'PENDING';
   responseTime: number;
   history: PingResult[];
-  incidentStartedAt: Date | null; // Tracks the true start of a multi-flip unstable incident
-  lastFailedAt: Date | null;      // Most recent DOWN check; kept after the incident resolves
+  // Failure record: never reset automatically, only when the user clicks Clear on the card
+  firstFailedAt: Date | null;     // First DOWN check since the last Clear
+  lastFailedAt: Date | null;      // Most recent DOWN check
+  failureCount: number;           // DOWN checks since the last Clear
 }

@@ -31,7 +31,6 @@ const REAL_CHECK_INTERVAL_MS = 60000;
 // Timer ticks can fire a few ms early; without slack the mock would skip every other tick
 const INTERVAL_SLACK_MS = 500;
 const MAX_HISTORY_BLOCKS = 12;
-const CHECKS_TO_RESOLVE_INCIDENT = 3;
 
 interface PingOutcome {
   status: 'UP' | 'DOWN';
@@ -79,8 +78,9 @@ export class EndpointState {
         status: 'PENDING',
         responseTime: 0,
         history: [],
-        incidentStartedAt: null,
-        lastFailedAt: null
+        firstFailedAt: null,
+        lastFailedAt: null,
+        failureCount: 0
       })));
     } catch (error) {
       // Leave the list empty so the page shows "No endpoints currently being monitored."
@@ -114,6 +114,22 @@ export class EndpointState {
         .catch(error => this.logger.error(LOG_SOURCE, `Unexpected error checking '${endpoint.name}'`, error))
         .finally(() => this.inFlight.delete(endpoint.id));
     }
+  }
+
+  // Called from a card's Clear button: forgets that endpoint's recorded failures.
+  // If it is still DOWN, the next failed check starts a new record.
+  public clearFailures(id: string): void {
+    this.endpointsSignal.update(currentList =>
+      currentList.map(endpoint => {
+        if (endpoint.id !== id) return endpoint;
+        this.logger.info(LOG_SOURCE, `Failure record cleared by user for '${endpoint.name}'`, {
+          firstFailedAt: endpoint.firstFailedAt,
+          lastFailedAt: endpoint.lastFailedAt,
+          failureCount: endpoint.failureCount
+        });
+        return { ...endpoint, firstFailedAt: null, lastFailedAt: null, failureCount: 0 };
+      })
+    );
   }
 
   // Randomly picks a healthy, failing or slow httpbin route
@@ -187,19 +203,12 @@ export class EndpointState {
           if (updatedHistory.length > MAX_HISTORY_BLOCKS) updatedHistory.shift();
         }
 
-        // 🚨 INCIDENT TRACKING ANCHOR LOGIC
-        // The anchor is set on the first DOWN and stays locked through rapid flips.
-        // It is only cleared once the current UP streak reaches a few checks in a row.
-        let lastIncidentStart = endpoint.incidentStartedAt;
-        if (newStatus === 'DOWN' && !lastIncidentStart) {
-          lastIncidentStart = new Date();
-          this.logger.warn(LOG_SOURCE, `Incident started for '${endpoint.name}'`);
-        } else if (newStatus === 'UP' && lastIncidentStart) {
-          const currentBlock = updatedHistory[updatedHistory.length - 1];
-          if (currentBlock.checkCount >= CHECKS_TO_RESOLVE_INCIDENT) {
-            this.logger.info(LOG_SOURCE, `Incident resolved for '${endpoint.name}' (started ${lastIncidentStart.toISOString()})`);
-            lastIncidentStart = null; // Incident fully resolved! Clear the anchor.
-          }
+        // 🚨 FAILURE RECORD
+        // First and latest failure are kept until the user clears them; recovery never resets them.
+        const isDown = newStatus === 'DOWN';
+        const now = new Date();
+        if (isDown && !endpoint.firstFailedAt) {
+          this.logger.warn(LOG_SOURCE, `First failure recorded for '${endpoint.name}'`);
         }
 
         return {
@@ -209,8 +218,9 @@ export class EndpointState {
           status: newStatus,
           responseTime: newLatency,
           history: updatedHistory,
-          incidentStartedAt: lastIncidentStart,
-          lastFailedAt: newStatus === 'DOWN' ? new Date() : endpoint.lastFailedAt
+          firstFailedAt: isDown ? (endpoint.firstFailedAt ?? now) : endpoint.firstFailedAt,
+          lastFailedAt: isDown ? now : endpoint.lastFailedAt,
+          failureCount: endpoint.failureCount + (isDown ? 1 : 0)
         };
       })
     );

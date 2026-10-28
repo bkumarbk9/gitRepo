@@ -44,7 +44,7 @@ A live, browser-based dashboard built with **Angular 22** that checks websites a
    ▶ Try Live Demo
 </a>
 
-![REST API Health Monitor dashboard showing four endpoint cards with status, latency charts, status timelines and an incident banner](Projects/rest-api-health-monitor/doc/img/screenshot.png)
+![REST API Health Monitor dashboard showing four endpoint cards with status, latency charts, status timelines and a failure record with a Clear button](Projects/rest-api-health-monitor/doc/img/screenshot.png)
 
 ## Bonjour in WPF
 📁 [`Projects/BonjourInWPF`](Projects/BonjourInWPF)

@@ -43,17 +43,22 @@
   @for (item of visibleEndpoints(); track item.id) {
     <div class="status-card">
       
-      <!-- 🚨 1. NEW CHANGE: Incident Alert Banner at the top of the card -->
-      @if (item.incidentStartedAt) {
-        <div style="background-color: #fdf2f2; border-left: 4px solid #ea4335; padding: 8px 12px; margin-bottom: 12px; font-size: 0.8rem; color: #c5221f; border-radius: 0 4px 4px 0; font-weight: 500;">
-          ⚠️ Instability detected since: {{ item.incidentStartedAt | date:'mediumTime' }}
-          @if (item.status === 'UP' && item.lastFailedAt) {
-            <br />Last failed: {{ item.lastFailedAt | date:'mediumTime' }}
-          }
-        </div>
-      } @else if (item.lastFailedAt) {
-        <div class="last-failed">
-          Last failed: {{ item.lastFailedAt | date:'mediumTime' }}
+      <!-- 🚨 1. Failure record: stays until the user clears it (red while DOWN, amber once recovered) -->
+      @if (item.firstFailedAt) {
+        <div class="failure-banner" [class.recovered]="item.status !== 'DOWN'">
+          <div class="failure-details">
+            <div class="failure-title">
+              ⚠️ {{ item.status === 'DOWN' ? 'Failing now' : 'Recovered' }}
+              · {{ item.failureCount }} failed {{ item.failureCount === 1 ? 'check' : 'checks' }}
+            </div>
+            <div>First failure: {{ item.firstFailedAt | date:'MMM d, h:mm:ss a' }}</div>
+            <div>Latest failure: {{ item.lastFailedAt | date:'MMM d, h:mm:ss a' }}</div>
+          </div>
+          <button type="button" class="btn-clear" (click)="onClearFailures(item.id)"
+            [attr.aria-label]="'Clear recorded failures for ' + item.name"
+            title="Clear the recorded failures for this monitor">
+            Clear
+          </button>
         </div>
       }
 

@@ -19,7 +19,7 @@ An Angular 22 single-page app that pings a configurable list of endpoints, recor
 
 Hosted on **Azure Static Web Apps** (Free tier), so it loads instantly with no warm-up. The checks run in your browser; open DevTools and add `?logLevel=debug` to the URL to watch them.
 
-![REST API Health Monitor dashboard showing four endpoint cards with status, latency charts, status timelines and an incident banner](doc/img/screenshot.png)
+![REST API Health Monitor dashboard showing four endpoint cards with status, latency charts, status timelines and a failure record with a Clear button](doc/img/screenshot.png)
 
 ---
 
@@ -41,7 +41,7 @@ Hosted on **Azure Static Web Apps** (Free tier), so it loads instantly with no w
 - **Scoreboard**: running count of online and offline endpoints.
 - **Latency chart**: per-endpoint bar chart, scaled to that endpoint's slowest result.
 - **Status timeline**: green/red strips, where consecutive checks with the same result merge into one block showing the check count.
-- **Incident tracking**: an "Instability detected" banner from the first failure until the endpoint has been UP for 3 checks in a row (about 6 seconds for the test endpoint, 2–3 minutes for real sites), plus a "Last failed" time that is kept after recovery.
+- **Failure record**: each card keeps the **first** and **latest** failure time and the number of failed checks. The record is never reset automatically, even after the endpoint recovers; it stays until you click that card's **Clear** button. The banner is red while the endpoint is failing and amber once it has recovered.
 - **Failed-only filter**: a checkbox to show only endpoints that are currently DOWN.
 - **JSON configuration**: endpoints live in `public/endpoints.json` and are loaded at runtime.
 - **Built-in test endpoint**: endpoint `1` randomly hits [httpbin.org](https://httpbin.org) success, failure and slow routes so you can see every chart state.
@@ -111,8 +111,8 @@ All logging goes through `Logger` (`src/src/app/core/services/logger.ts`). Messa
 | Level | What is logged |
 |---|---|
 | `error` | `endpoints.json` failed to load; unexpected errors during a check |
-| `warn` | An endpoint went DOWN; an incident started |
-| `info` | Endpoints loaded; recovery; incident resolved |
+| `warn` | An endpoint went DOWN; first failure recorded |
+| `info` | Endpoints loaded; recovery; failure record cleared by the user |
 | `debug` | Every check, with URL, result reason (`HTTP 404`, `timeout`, `network error`…) and latency |
 
 The default level is `debug` in development and `warn` in production builds. To change it:
@@ -143,7 +143,7 @@ rest-api-health-monitor/
             ├── models/
             │   └── endpoint.model.ts
             └── core/services/
-                ├── endpoint-state.ts     Health checks, history, incidents
+                ├── endpoint-state.ts     Health checks, history, failure record
                 └── logger.ts             Levelled console logging
 ```
 

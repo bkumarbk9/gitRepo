@@ -76,11 +76,52 @@
   user-select: none;
 }
 
-/* Shown on recovered cards so the last failure isn't lost when the banner clears */
-.last-failed {
-  font-size: 0.8rem;
-  color: #80868b;
+/* Failure record banner: red while DOWN, amber once recovered; cleared only by the user */
+.failure-banner {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  background-color: #fdf2f2;
+  border-left: 4px solid #ea4335;
+  border-radius: 0 4px 4px 0;
+  padding: 8px 12px;
   margin-bottom: 4px;
+  font-size: 0.8rem;
+  color: #c5221f;
+}
+
+.failure-banner.recovered {
+  background-color: #fef7e0;
+  border-left-color: #f9ab00;
+  color: #8a4b00;
+}
+
+.failure-details {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.failure-title {
+  font-weight: 600;
+}
+
+.btn-clear {
+  flex-shrink: 0;
+  background: white;
+  color: inherit;
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  padding: 3px 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-clear:hover {
+  background-color: rgba(255, 255, 255, 0.6);
+  text-decoration: underline;
 }
 
 /* Card Workspace Grid */

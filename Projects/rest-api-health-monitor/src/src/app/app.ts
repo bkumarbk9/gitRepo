@@ -48,6 +48,10 @@ export class App implements OnInit, OnDestroy {
     this.showFailedOnly.set((event.target as HTMLInputElement).checked);
   }
 
+  public onClearFailures(id: string): void {
+    this.endpointState.clearFailures(id);
+  }
+
    public onCheckNowClick(): void {
     this.endpointState.checkHealth(true);
   }
