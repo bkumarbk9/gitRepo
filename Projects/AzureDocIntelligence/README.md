@@ -34,6 +34,7 @@ Add `-o C:\temp\result.json` to save the result to a file instead of printing it
 ## Table of contents
 - [Azure AI Document Reader](#azure-ai-document-reader)
   - [Table of contents](#table-of-contents)
+  - [Sample results](#sample-results)
   - [Features](#features)
   - [Technologies used](#technologies-used)
   - [Architecture](#architecture)
@@ -52,6 +53,40 @@ Add `-o C:\temp\result.json` to save the result to a file instead of printing it
   - [Roadmap](#roadmap)
   - [License](#license)
     - [Commercial licensing](#commercial-licensing)
+
+---
+
+## Sample results
+
+Real output from the live demo on hard-to-read inputs. Click an image to see it full size; the original files are in [`samples/`](samples) so you can try them yourself.
+
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <a href="doc/img/numbersgs150Parsed.jpg"><img src="doc/img/numbersgs150Parsed.jpg" width="100%" alt="Handwritten log sheet on stained paper next to its extracted JSON"></a>
+      <br><b>Handwritten log, stained and creased</b>
+      <br><sub>Pen and pencil times and distances in a grid. Most entries come through in reading order (<code>3.75 miles</code>, <code>1:29</code>, <code>2:15</code>); a few faint strokes are misread. <a href="samples/numbers_gs150.jpg">Original</a></sub>
+    </td>
+    <td width="50%" valign="top">
+      <a href="doc/img/stock_gs200Parsed.jpg"><img src="doc/img/stock_gs200Parsed.jpg" width="100%" alt="Newspaper stock table next to its extracted JSON"></a>
+      <br><b>Dense newspaper stock table</b>
+      <br><sub>Tiny, low-contrast newsprint. Headings, stock names and prices are extracted cell by cell (<code>Biomet</code>, <code>45.71</code>, <code>-0.42</code>). <a href="samples/stock_gs200.jpg">Original</a></sub>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <a href="doc/img/plaidParsed.jpg"><img src="doc/img/plaidParsed.jpg" width="100%" alt="Faded newspaper theatre ad next to its extracted JSON"></a>
+      <br><b>Faded newspaper ad with decorative fonts</b>
+      <br><sub>Dates, showtimes, prices, phone number and website are extracted exactly, with 0.93 average confidence. Only the stylized title word is misread. <a href="samples/plaid_gs300.jpg">Original</a></sub>
+    </td>
+    <td width="50%" valign="top">
+      <a href="doc/img/captcha1Parsed.jpg"><img src="doc/img/captcha1Parsed.jpg" width="100%" alt="Distorted captcha 'clizil' next to its extracted JSON"></a>
+      <a href="doc/img/captcha2Parsed.jpg"><img src="doc/img/captcha2Parsed.jpg" width="100%" alt="Distorted captcha 'bolisms' next to its extracted JSON"></a>
+      <br><b>Distorted captcha text</b>
+      <br><sub>Warped, hand-drawn style words read correctly: <code>clizil</code> (0.82 confidence) and <code>bolisms</code> (0.92). Originals: <a href="samples/captcha1.jpg">1</a>, <a href="samples/captcha2.jpg">2</a></sub>
+    </td>
+  </tr>
+</table>
 
 ---
 
@@ -302,6 +337,8 @@ ContainerAppConsoleLogs_CL
 AzureDocIntelligence/
 ├── LICENSE                                # GNU AGPL-3.0
 ├── README.md
+├── doc/img/                               # Sample result screenshots used in this README
+├── samples/                               # Test documents: low-quality scans and captchas
 └── src/
     ├── AzDocIntelligenceAI.slnx           # Solution
     └── AzDocIntelligenceAI/
