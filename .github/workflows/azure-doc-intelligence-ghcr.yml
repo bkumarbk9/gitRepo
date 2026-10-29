@@ -1,0 +1,99 @@
+# Copyright (C) 2026 Bharath K A (bkumarbk9)
+# SPDX-License-Identifier: AGPL-3.0-only
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License version 3
+# as published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+# Builds the Azure AI Document Reader container image with the .NET SDK (no Docker)
+# and pushes it to GitHub Container Registry (ghcr.io).
+#
+# Image: ghcr.io/<owner>/azdocintelligenceai, tagged sha-<short commit> and latest.
+# No secrets needed: it signs in to ghcr.io with the workflow's built-in GITHUB_TOKEN.
+name: Build Azure AI Document Reader image
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'Projects/AzureDocIntelligence/src/**'
+      - '.github/workflows/azure-doc-intelligence-ghcr.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write   # push to ghcr.io
+
+concurrency:
+  group: azure-doc-intelligence-image
+  cancel-in-progress: true
+
+env:
+  SRC_DIR: Projects/AzureDocIntelligence/src
+  CLIENT_DIR: Projects/AzureDocIntelligence/src/AzDocIntelligenceAI.Client/document-extractor
+  IMAGE_NAME: azdocintelligenceai
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Projects/AzureDocIntelligence/src
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      # dotnet publish builds the Angular client into wwwroot (see PublishAngularClient in the csproj)
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: ${{ env.CLIENT_DIR }}/package-lock.json
+
+      - name: Compute image name and tags
+        id: meta
+        run: |
+          owner="${GITHUB_REPOSITORY_OWNER,,}"   # ghcr.io names must be lowercase
+          echo "repository=${owner}/${IMAGE_NAME}" >> "$GITHUB_OUTPUT"
+          echo "sha_tag=sha-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+
+      # The .NET SDK builds the image on top of mcr.microsoft.com/dotnet/aspnet and pushes it
+      # straight to the registry; no Dockerfile or Docker daemon is involved.
+      # PublishRepositoryUrl adds the org.opencontainers.image.source label, which links the
+      # package to this repository on GitHub.
+      - name: Build and push image with the .NET SDK
+        env:
+          SDK_CONTAINER_REGISTRY_UNAME: ${{ github.actor }}
+          SDK_CONTAINER_REGISTRY_PWORD: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          dotnet publish AzDocIntelligenceAI/AzDocIntelligenceAI.csproj \
+            -c Release -r linux-x64 -t:PublishContainer \
+            -p:PublishRepositoryUrl=true \
+            -p:ContainerRegistry=ghcr.io \
+            -p:ContainerRepository=${{ steps.meta.outputs.repository }} \
+            -p:ContainerImageTags="\"${{ steps.meta.outputs.sha_tag }};latest\""
+
+      - name: Summary
+        run: |
+          image="ghcr.io/${{ steps.meta.outputs.repository }}"
+          {
+            echo "### Image pushed"
+            echo ""
+            echo "- \`${image}:${{ steps.meta.outputs.sha_tag }}\`"
+            echo "- \`${image}:latest\`"
+            echo ""
+            echo "Deploy a specific build to Azure Container Apps with:"
+            echo ""
+            echo "\`az containerapp update --name <app> --resource-group <rg> --image ${image}:${{ steps.meta.outputs.sha_tag }}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
