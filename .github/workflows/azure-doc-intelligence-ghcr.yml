@@ -17,6 +17,7 @@
 # and pushes it to GitHub Container Registry (ghcr.io).
 #
 # Image: ghcr.io/<owner>/azdocintelligenceai, tagged sha-<short commit> and latest.
+# Only the newest VERSIONS_TO_KEEP versions are kept; older ones are deleted after each push.
 # No secrets needed: it signs in to ghcr.io with the workflow's built-in GITHUB_TOKEN.
 name: Build Azure AI Document Reader image
 
@@ -40,6 +41,7 @@ env:
   SRC_DIR: Projects/AzureDocIntelligence/src
   CLIENT_DIR: Projects/AzureDocIntelligence/src/AzDocIntelligenceAI.Client/document-extractor
   IMAGE_NAME: azdocintelligenceai
+  VERSIONS_TO_KEEP: 5   # older image versions are deleted after each push
 
 jobs:
   build-and-push:
@@ -83,6 +85,17 @@ jobs:
             -p:ContainerRegistry=ghcr.io \
             -p:ContainerRepository=${{ steps.meta.outputs.repository }} \
             -p:ContainerImageTags="\"${{ steps.meta.outputs.sha_tag }};latest\""
+
+      # Keep the package small: only the newest versions are kept. Base-image layers are shared
+      # between versions, so each extra version only costs the ~1 MB app layer anyway.
+      # Make sure the version Azure Container Apps runs is among those kept, or it can't be
+      # pulled when the app scales up from zero.
+      - name: Delete old image versions (keep newest ${{ env.VERSIONS_TO_KEEP }})
+        uses: actions/delete-package-versions@v5
+        with:
+          package-name: ${{ env.IMAGE_NAME }}
+          package-type: container
+          min-versions-to-keep: ${{ env.VERSIONS_TO_KEEP }}
 
       - name: Summary
         run: |
