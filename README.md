@@ -93,7 +93,9 @@ There was also one project, [WPF (MVVM pattern) based mDNS (Bonjour) discovery t
 <details open>
 <summary>Snapshot of the CodeProject articles page (3 Jul 2024)</summary>
 
-<img src="doc/img/codeproject-articles.png" width="640" alt="CodeProject page 'Articles by Bharath K A (Articles: 11, Project: 1)', average article rating 4.71, listing each article with its date, rating, votes, views, downloads and star rating">
+<a href="https://web.archive.org/web/20240703055712/https://www.codeproject.com/script/Articles/MemberArticles.aspx?amid=2794214"><img src="doc/img/codeproject-articles.png" width="640" alt="CodeProject page 'Articles by Bharath K A (Articles: 11, Project: 1)', average article rating 4.71, listing each article with its date, rating, votes, views, downloads and star rating. Opens the archived page."></a>
+
+Click the image to open the archived page, or view the [full-size snapshot](doc/img/codeproject-articles.png).
 </details>
 
 ---
