@@ -58,6 +58,21 @@ A Windows desktop tool that uses **mDNS (Bonjour/Zeroconf)** to discover the dev
 
 ---
 
+# Prototypes
+
+Earlier experiments and proofs of concept, kept as originally published. They show the idea but aren't maintained or production-ready; some have grown into full projects above.
+
+| Prototype | Area | Tech stack | Year | License |
+|---|---|---|---|---|
+| [Cloud Spreadsheet (original)](LegacyProjects/prototypeProjects/CloudSpreadsheet) | Real-time web | HTML5, JavaScript, WebSockets, C# server, .NET Framework 4.5 | 2015 | AGPL-3.0 |
+
+## Cloud Spreadsheet (original)
+📁 [`LegacyProjects/prototypeProjects/CloudSpreadsheet`](LegacyProjects/prototypeProjects/CloudSpreadsheet)
+
+A lightweight, real-time online spreadsheet that pushes cell updates to the browser over **WebSockets**, demonstrating low-latency messaging. It includes an HTML/JavaScript client, a hand-written C# WebSocket server and a C# spreadsheet service, plus the original CodeProject article (preserved as a PDF). Rewritten as the [Cloud Spreadsheet](Projects/CloudSpreadsheet) project above.
+
+---
+
 ## License
 
 All projects in this repository are licensed under the **GNU Affero General Public License v3.0 only** (`AGPL-3.0-only`). See [LICENSE](LICENSE); each project folder also contains a copy. Third-party libraries included with a project remain under their own licenses.
