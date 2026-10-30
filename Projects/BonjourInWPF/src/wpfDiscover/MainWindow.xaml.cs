@@ -13,6 +13,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using System;
 using Telerik.Windows.Controls;
 using NLog;
 
@@ -36,11 +37,12 @@ namespace wpfDiscover
             menuPane.ContextMenuTemplate = null;
             errorPane.ContextMenuTemplate = null;
             devicesPane.ContextMenuTemplate = null;
-            detailsPane.ContextMenuTemplate = null; 
+            detailsPane.ContextMenuTemplate = null;
+
+            // Stop discovery and the TTL expiry thread when the window closes
+            Closed += (sender, e) => (DataContext as IDisposable)?.Dispose();
 
             logger.Info("Init DeviceDiscoveryMainWindow complete");
         }
     }
-
-    
 }

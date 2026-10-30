@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<!--
+  Copyright (C) 2026 Bharath K A (bkumarbk9)
+  SPDX-License-Identifier: AGPL-3.0-only
+
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU Affero General Public License version 3
+  as published by the Free Software Foundation.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU Affero General Public License for more details.
+
+  You should have received a copy of the GNU Affero General Public License
+  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="A real-time collaborative spreadsheet with formulas, built on ASP.NET Core WebSockets.">
+  <title>Cloud Spreadsheet</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="app.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <header class="toolbar">
+    <div class="brand">
+      <img src="favicon.svg" alt="" width="22" height="22">
+      <span>Cloud Spreadsheet</span>
+    </div>
+
+    <form id="open-form" class="open-form" autocomplete="off">
+      <label for="sheet-name">Sheet</label>
+      <input id="sheet-name" name="sheet" required maxlength="64" spellcheck="false"
+             pattern="[A-Za-z0-9][A-Za-z0-9_\-]{0,63}"
+             title="1-64 letters, digits, '-' or '_', starting with a letter or digit">
+      <button type="submit">Open</button>
+    </form>
+
+    <button id="copy-link" type="button" class="secondary">Copy link</button>
+
+    <div class="status-area">
+      <span id="users" class="users" hidden></span>
+      <span id="status" class="status" data-state="connecting">
+        <span class="dot" aria-hidden="true"></span>
+        <span id="status-text">Connecting…</span>
+      </span>
+    </div>
+  </header>
+
+  <div class="formula-bar">
+    <span id="cell-name" class="cell-name" aria-label="Selected cell">A1</span>
+    <span class="fx" aria-hidden="true">fx</span>
+    <input id="formula-input" aria-label="Contents of the selected cell" autocomplete="off" spellcheck="false">
+  </div>
+
+  <main id="grid-wrap" class="grid-wrap" tabindex="0" aria-label="Spreadsheet grid. Use the arrow keys to move, Enter to edit.">
+    <table id="grid" class="grid" role="grid"></table>
+  </main>
+
+  <div id="idle-panel" class="idle-panel" role="alertdialog" aria-modal="true" aria-labelledby="idle-title" aria-describedby="idle-text" hidden>
+    <div class="idle-card">
+      <h2 id="idle-title">Disconnected</h2>
+      <p id="idle-text"></p>
+      <button id="reconnect" type="button">Reconnect</button>
+    </div>
+  </div>
+
+  <footer class="footer">
+    <details>
+      <summary>Formula help</summary>
+      <ul>
+        <li><b>Cell formulas</b>, as in Google Sheets: start with <code>=</code>, e.g. <code>=B2*C2</code>, <code>=SUM(D2:D20)</code>, <code>=IF(A2&gt;10, "big", "small")</code>.</li>
+        <li><b>Column formulas</b>: type <code>Title=expression</code> in a header cell (row 1), e.g. <code>Total=Quantity*Price</code>. Every row below is calculated from the columns named in the expression.</li>
+        <li>Operators: <code>+ - * / ^ %</code>, <code>&amp;</code> joins text, comparisons <code>= &lt;&gt; &lt; &gt; &lt;= &gt;=</code>.</li>
+        <li>Functions: SUM, AVERAGE, MIN, MAX, COUNT, ROUND, ABS, SQRT, POWER, MOD, INT, IF, LOG, LN, EXP, SIN, COS, TAN, PI.</li>
+        <li>Changes save automatically and appear live for everyone with the same sheet open. Share the link to collaborate.</li>
+        <li>After 30 minutes without use the page disconnects; click <b>Reconnect</b> to carry on where you left off.</li>
+      </ul>
+    </details>
+    <span id="message" class="message" role="status" aria-live="polite"></span>
+  </footer>
+</body>
+</html>

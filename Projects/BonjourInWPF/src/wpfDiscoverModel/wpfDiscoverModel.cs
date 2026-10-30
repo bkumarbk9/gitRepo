@@ -15,8 +15,7 @@
 
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Linq;
+using System.Globalization;
 using System.Text;
 using System.Threading;
 
@@ -26,114 +25,147 @@ using Zeroconf;
 namespace wpfDiscoverModel
 {
     /// <summary>
-    /// This is Model class exposing discovered devices
+    /// Model class: discovers devices with Zeroconf (mDNS/Bonjour) and tracks their TTL expiry
     /// </summary>
-    public class WpfDiscoverModel : IObserver<DomainService>, INotifyPropertyChanged, IObserver<IZeroconfHost>
+    public class WpfDiscoverModel : IObserver<DomainService>, IObserver<IZeroconfHost>, IDisposable
     {
         #region Private Members
-        private static readonly NLog.Logger logger = NLog.LogManager.GetCurrentClassLogger();
-        private Dictionary<string, DeviceDetails> discoveredDevices = new Dictionary<string, DeviceDetails>();
-        private IObservable<DomainService> domainObserver;
-        private IObservable<ServiceAnnouncement> serviceAnnouncement;
-        private List<IDisposable> subDispose = new List<IDisposable>();
-        private List<IObservable<IZeroconfHost>> zObservables = new List<IObservable<IZeroconfHost>>();
-        private bool isShutDown = false;
-        #endregion //  Private Members
+        private static readonly Logger logger = LogManager.GetCurrentClassLogger();
 
-        #region Private Consts
-        private const int RETRY_COUNT = 2;
-        private const int RETRY_DELAY_IN_MS = 2000;
-        private const string SEPERATOR = " | ";
-        private const string MANGLE = "@@";
-        private const int DEFAULT_WAKE_TIME = 9000;
-        private const int SECONDS_TO_MILLISECOND = 1000;
-        #endregion // Private Consts
+        // Guards every field below; events are always raised outside this lock
+        private readonly object syncRoot = new object();
+        private readonly Dictionary<string, DeviceDetails> discoveredDevices = new Dictionary<string, DeviceDetails>();
+        private readonly HashSet<string> resolvedDomains = new HashSet<string>();
+        private readonly List<IDisposable> subscriptions = new List<IDisposable>();
+        private readonly CancellationTokenSource disposeTokenSource = new CancellationTokenSource();
+        private readonly Thread expiryThread;
+        private bool isRunning;
+        private bool isDisposed;
+        #endregion // Private Members
+
+        #region Private Constants
+        private const int DefaultRetryCount = 2;
+        private const int DefaultRetryDelayInMs = 2000;
+        private const int DefaultWakeIntervalMs = 9000;
+        private const string MessageSeparator = " | ";
+        private const string KeySeparator = "@@";
+        #endregion // Private Constants
 
         #region Model Events
-        public event PropertyChangedEventHandler PropertyChanged;
+        /// <summary>
+        /// Raised with the device key when a device is discovered or its details change (e.g. TTL expiry)
+        /// </summary>
+        public event Action<string> DevicePublished;
+
+        /// <summary>
+        /// Raised with the device key when a device announces that it is leaving the network (TTL 0)
+        /// </summary>
+        public event Action<string> DeviceUnpublished;
+
+        /// <summary>
+        /// Raised with true when discovery starts and false when it stops
+        /// </summary>
         public event Action<bool> StateChanged;
+
+        /// <summary>
+        /// Raised with a timestamped error message
+        /// </summary>
         public event Action<string> Error;
-        public event Action<string> Unpublish;
+
+        /// <summary>
+        /// Raised with a timestamped informational message, such as a service announcement
+        /// </summary>
+        public event Action<string> Message;
         #endregion // Model Events
 
-        #region Public Members
-        public TimeSpan ScanTime { get;  set; }
-        public int RetryCount { get;  set; }
-        public int RetryDelayInMs { get;  set; }
-        #endregion // Public Members
+        #region Public Properties
+        public TimeSpan ScanTime { get; set; }
+        public int RetryCount { get; set; }
+        public int RetryDelayInMs { get; set; }
+        #endregion // Public Properties
 
-        /// <summary>
-        /// Model Construction
-        /// </summary>
+        // Clock used for TTL bookkeeping; replaced in unit tests
+        internal Func<DateTime> Clock { get; set; } = () => DateTime.Now;
+
         #region Model Construction
-        public WpfDiscoverModel()
+        public WpfDiscoverModel() : this(startExpiryThread: true)
         {
-            logger.Info("WpfDiscoverModel -- Model Creation");
+        }
+
+        internal WpfDiscoverModel(bool startExpiryThread)
+        {
+            logger.Info("WpfDiscoverModel -- Model creation");
             LoadDefaultConfigs();
-            isShutDown = false;
-            // This is for checking TTL expiry
-            ThreadPool.QueueUserWorkItem(ProcssExpiry);
-            logger.Info("WpfDiscoverModel -- Model Creation Complete");
+
+            if (startExpiryThread)
+            {
+                // Background thread, so it never keeps the process alive after the window closes
+                expiryThread = new Thread(ExpiryLoop) { IsBackground = true, Name = "TTL expiry" };
+                expiryThread.Start();
+            }
+
+            logger.Info("WpfDiscoverModel -- Model creation complete");
         }
+        #endregion // Model Construction
 
-        ~WpfDiscoverModel()
-        {
-            isShutDown = true;
-        }
-
-        #endregion // Model Constrction
-
-        #region Public Members
+        #region Public Methods
         /// <summary>
-        /// Initializes Model
+        /// Starts discovery. Does nothing if discovery is already running.
         /// </summary>
         public void Init()
         {
+            lock (syncRoot)
+            {
+                if (isDisposed)
+                {
+                    throw new ObjectDisposedException(nameof(WpfDiscoverModel));
+                }
+
+                if (isRunning)
+                {
+                    logger.Info("Init -- Discovery is already running");
+                    return;
+                }
+
+                isRunning = true;
+            }
+
             try
             {
-                domainObserver = ZeroconfResolver.BrowseDomainsContinuous(ScanTime, RetryCount, RetryDelayInMs);
-                serviceAnnouncement = ZeroconfResolver.ListenForAnnouncementsAsync();
-
-                subDispose.Add(domainObserver.Subscribe(this));
-                subDispose.Add(serviceAnnouncement.Subscribe(OnAnnouncement));
-                BubbleStateChanged(true);
+                AddSubscription(ZeroconfResolver.BrowseDomainsContinuous(ScanTime, RetryCount, RetryDelayInMs).Subscribe(this));
+                AddSubscription(ZeroconfResolver.ListenForAnnouncementsAsync().Subscribe(OnAnnouncement));
+                RaiseStateChanged(true);
             }
             catch (Exception ex)
             {
-                BubbleError(ex.Message);
+                logger.Error(ex, "Init -- Failed to start discovery");
+                RaiseError(ex.Message);
                 Shutdown();
             }
         }
 
         /// <summary>
-        /// Resets Model
+        /// Restarts discovery so new settings take effect. Does nothing while discovery is switched off.
         /// </summary>
-        /// <param name="status"></param>
-        public void Reset(object status)
+        /// <param name="isOn">Whether discovery is currently switched on</param>
+        public void Reset(bool isOn)
         {
-            bool state = GetState(status);
-
-            if (state)
-            {
-                OnOff(false);
-            }
-            else
+            if (!isOn)
             {
                 return;
             }
 
+            OnOff(false);
             OnOff(true);
         }
 
         /// <summary>
-        /// Switches on or off the Model
+        /// Switches discovery on or off
         /// </summary>
-        /// <param name="status"></param>
-        public void OnOff(object status)
+        /// <param name="on">True to start discovery, false to stop it</param>
+        public void OnOff(bool on)
         {
-            bool state = GetState(status);
-
-            if (state)
+            if (on)
             {
                 Init();
             }
@@ -144,387 +176,284 @@ namespace wpfDiscoverModel
         }
 
         /// <summary>
-        /// Gives details of discovered device
+        /// Gives the summary of a discovered device, or null if the key is unknown
         /// </summary>
-        /// <param name="key"></param>
-        /// <returns></returns>
+        /// <param name="key">Device key, as raised by DevicePublished</param>
         public DiscoveredDevice GetDiscoveredDevice(string key)
         {
-            DiscoveredDevice deviceDiscvd = null;
-
-            lock (this)
+            lock (syncRoot)
             {
-                if (discoveredDevices.TryGetValue(key, out DeviceDetails details))
+                if (key != null && discoveredDevices.TryGetValue(key, out DeviceDetails details))
                 {
-                    logger.Debug("GetDiscoveredDevice -- Found :{0}", key);
-                    deviceDiscvd = new DiscoveredDevice(key, details.Name, details.Domain, GetServiceNameStripped(details.Service), details.Id);
-                }
-                else
-                {
-                    logger.Error("GetDiscoveredDevice -- GetDiscoveredDevice Failed for key :{0}", key);
+                    logger.Debug("GetDiscoveredDevice -- Found: {0}", key);
+                    return new DiscoveredDevice(details.Key, details.Name, details.IPAddress, details.Port, details.ServiceType);
                 }
             }
 
-            return deviceDiscvd;
+            logger.Warn("GetDiscoveredDevice -- Device not found: {0}", key);
+            return null;
         }
 
-
         /// <summary>
-        /// Get detailed description of service 
+        /// Gives the detailed description of a discovered device, or an empty string if the key is unknown
         /// </summary>
-        /// <param name="key"></param>
-        /// <returns></returns>
+        /// <param name="key">Device key, as raised by DevicePublished</param>
         public string GetDeviceDetails(string key)
         {
-            string retVal = string.Empty;
-            lock (this)
+            lock (syncRoot)
             {
-                if (discoveredDevices.TryGetValue(key, out DeviceDetails details))
+                if (key != null && discoveredDevices.TryGetValue(key, out DeviceDetails details))
                 {
-                    logger.Debug("GetDeviceDetails -- GetDeviceDetails Found for key :{0}", key);
-                    retVal = details.GetDeviceDetails();
-                }
-                else
-                {
-                    logger.Error("GetDeviceDetails -- GetDeviceDetails Failed for key :{0}", key);
+                    logger.Debug("GetDeviceDetails -- Found: {0}", key);
+                    return details.ServiceDetails;
                 }
             }
 
-            return retVal;
+            logger.Warn("GetDeviceDetails -- Device not found: {0}", key);
+            return string.Empty;
         }
 
-        #endregion // Public Members
-
-        #region IOberver<DomainService> Implementations
         /// <summary>
-        /// This method is called by ZeroConf Library giving domain and service details
+        /// Loads the default discovery settings
+        /// </summary>
+        public void LoadDefaultConfigs()
+        {
+            ScanTime = default(TimeSpan);
+            RetryCount = DefaultRetryCount;
+            RetryDelayInMs = DefaultRetryDelayInMs;
+        }
+
+        /// <summary>
+        /// Stops discovery and the TTL expiry thread
+        /// </summary>
+        public void Dispose()
+        {
+            lock (syncRoot)
+            {
+                if (isDisposed)
+                {
+                    return;
+                }
+
+                isDisposed = true;
+            }
+
+            Shutdown();
+            disposeTokenSource.Cancel();
+            expiryThread?.Join(TimeSpan.FromSeconds(2));
+        }
+        #endregion // Public Methods
+
+        #region IObserver<DomainService> Implementation
+        /// <summary>
+        /// Called by the Zeroconf library for each domain found while browsing
         /// </summary>
         /// <param name="value"></param>
         public void OnNext(DomainService value)
         {
+            if (value == null || value.Domain == null)
+            {
+                return;
+            }
+
+            lock (syncRoot)
+            {
+                // The continuous browse reports the same domains on every scan; resolve each domain only once
+                if (!isRunning || !resolvedDomains.Add(value.Domain))
+                {
+                    return;
+                }
+            }
+
             try
             {
-                logger.Info("OnNext -- testDiscover::OnNext (DomainService) Serivce: {0}, Domain: {1}", value.Service, value.Domain);
-                lock (this)
-                {
-                    IObservable<IZeroconfHost> zObservable = ZeroconfResolver.ResolveContinuous(value.Domain, ScanTime, RetryCount, RetryDelayInMs);
-                    zObservables.Add(zObservable);
-                    subDispose.Add(zObservable.Subscribe(this));
-                }
+                logger.Info("OnNext -- New domain: {0}, service: {1}", value.Domain, value.Service);
+                AddSubscription(ZeroconfResolver.ResolveContinuous(value.Domain, ScanTime, RetryCount, RetryDelayInMs).Subscribe(this));
             }
             catch (Exception ex)
             {
-                BubbleError(ex.Message);
+                logger.Error(ex, "OnNext -- Failed to resolve domain {0}", value.Domain);
+                RaiseError(ex.Message);
                 Shutdown();
             }
         }
 
         /// <summary>
-        /// This method is called by Zero conf library saying completed
+        /// Called by the Zeroconf library when browsing or resolving completes
         /// </summary>
         public void OnCompleted()
         {
-            logger.Info("Completed");
-            BubbleError("Completed Browsing");
+            logger.Info("OnCompleted -- Completed browsing");
+            RaiseMessage("Completed browsing");
         }
 
         /// <summary>
-        /// This method is called by Zeroconf library when an error occurs
+        /// Called by the Zeroconf library when an error occurs
         /// </summary>
         /// <param name="error"></param>
         public void OnError(Exception error)
         {
-            logger.Error(error.ToString());
-            BubbleError(error.Message);
+            logger.Error(error, "OnError -- Zeroconf reported an error");
+            RaiseError(error?.Message ?? "Unknown Zeroconf error");
         }
+        #endregion // IObserver<DomainService> Implementation
 
+        #region IObserver<IZeroconfHost> Implementation
         /// <summary>
-        /// This is to load default settings
-        /// </summary>
-        public void LoadDefaultConfigs()
-        {
-            ScanTime = default(TimeSpan);
-            RetryCount = RETRY_COUNT;
-            RetryDelayInMs = RETRY_DELAY_IN_MS;
-        }
-        #endregion
-
-        #region IObserver<IZeroconfHost> Members
-        /// <summary>
-        /// This method is csalled by Zeroconf library with resolved details.
+        /// Called by the Zeroconf library with resolved host details
         /// </summary>
         /// <param name="value"></param>
         public void OnNext(IZeroconfHost value)
         {
             AddNewDevices(value);
         }
-        #endregion
+        #endregion // IObserver<IZeroconfHost> Implementation
 
-        #region Private Members
+        #region Internal Methods
         /// <summary>
-        /// Formats Service Announcement to be displayed well
-        /// </summary>
-        /// <param name="sa"></param>
-        /// <returns></returns>
-        private string FormatServiceAnnouncement(ServiceAnnouncement sa)
-        {
-            StringBuilder svcAnnouncement = new StringBuilder();
-            svcAnnouncement.AppendFormat("Name: {0}", sa.AdapterInformation.Name);
-            svcAnnouncement.AppendFormat("\n Address: {0}", sa.AdapterInformation.Address);
-            svcAnnouncement.AppendFormat("\n {0}", FormatIZeroConfHost(sa.Host));
-
-            return svcAnnouncement.ToString();
-        }
-
-        /// <summary>
-        /// Serivce announcement callback
-        /// </summary>
-        /// <param name="sa"></param>
-        private void OnAnnouncement(ServiceAnnouncement sa)
-        {
-            string svcAnnounceDetails = FormatServiceAnnouncement(sa);
-            BubbleError(svcAnnounceDetails);
-            logger.Info(svcAnnounceDetails);
-        }
-
-        /// <summary>
-        /// Gets current state of Model
-        /// </summary>
-        /// <param name="status"></param>
-        /// <returns></returns>
-        private bool GetState(object status)
-        {
-            bool state = false;
-            if (status is bool)
-            {
-                state = (bool)status;
-            }
-
-            return state;
-        }
-
-        /// <summary>
-        /// Propagate changed state to layers above
-        /// </summary>
-        /// <param name="state"></param>
-        private void BubbleStateChanged(bool state)
-        {
-            StateChanged?.Invoke(state);
-        }
-
-        /// <summary>
-        /// Disposes and shuts down
-        /// </summary>
-        private void Shutdown()
-        {
-            try
-            {
-                lock (this)
-                {
-                    for (int item = subDispose.Count() - 1; item >= 0; item--)
-                    {
-                        subDispose[item].Dispose();
-                    }
-
-                    zObservables.Clear();
-                    subDispose.Clear();
-                    discoveredDevices.Clear();
-                    domainObserver = null;
-                    serviceAnnouncement = null;
-                    BubbleStateChanged(false);
-                }
-            }
-            catch(Exception ex)
-            {
-                BubbleError(ex.Message);
-                Shutdown();
-            }
-        }
-
-        /// <summary>
-        /// Gets Service Name 
-        /// </summary>
-        /// <param name="serviceName"></param>
-        /// <returns></returns>
-        private string GetServiceNameStripped(string serviceName)
-        {
-            int lastIndex = serviceName.LastIndexOf(":");
-            if (lastIndex > 0)
-            {
-                return serviceName.Substring(0, lastIndex);
-            }
-            else
-            {
-                return serviceName;
-            }
-        }
-
-        /// <summary>
-        /// Adds new device 
+        /// Adds or refreshes the services of a resolved host; services with TTL 0 are removed
         /// </summary>
         /// <param name="zconfHost"></param>
-        private void AddNewDevices(IZeroconfHost zconfHost)
+        internal void AddNewDevices(IZeroconfHost zconfHost)
         {
-             List<string> devicesToPublish = new List<string>();
-            List<string> devicesToUnpublish = new List<string>();
-
             if (zconfHost == null || zconfHost.IPAddress == null || zconfHost.Services == null)
             {
-                logger.Error("Received Null values, so disregarding");
+                logger.Warn("AddNewDevices -- Received null host details, so disregarding");
                 return;
             }
 
-            string key = zconfHost.IPAddress;
+            var devicesToPublish = new List<string>();
+            var devicesToUnpublish = new List<string>();
+            string hostDetails = FormatZeroconfHost(zconfHost);
+            DateTime now = Clock();
 
-            foreach (var service in zconfHost.Services)
+            lock (syncRoot)
             {
-                if ( service.Key == null)
-                { 
-                    logger.Error("Received Null values for service.key, so disregarding");
-                    continue;
-                }
-
-                string serviceKey = key;
-                serviceKey += MANGLE + service.Key;
-                serviceKey += MANGLE + service.Value.Port.ToString();
-
-                DeviceDetails newDevice = new DeviceDetails(this, serviceKey, zconfHost.IPAddress,
-                                                            service.Value.Port.ToString(), zconfHost.DisplayName,
-                                                            zconfHost.IPAddress, service.Key, service.Value.Ttl,
-                                                            FormatIZeroConfHost(zconfHost));
-
-                if (service.Value.Ttl <= 0)
+                foreach (var service in zconfHost.Services)
                 {
-                    devicesToUnpublish.Add(serviceKey);
-                }
-                else
-                {
-                    devicesToPublish.Add(serviceKey);
-                    lock (this)
+                    if (service.Key == null || service.Value == null)
                     {
-                        if (discoveredDevices.ContainsKey(serviceKey))
-                            discoveredDevices.Remove(serviceKey);
+                        logger.Warn("AddNewDevices -- Received a null service, so disregarding");
+                        continue;
+                    }
 
-                        discoveredDevices.Add(serviceKey, newDevice);
+                    string port = service.Value.Port.ToString(CultureInfo.InvariantCulture);
+                    string key = zconfHost.IPAddress + KeySeparator + service.Key + KeySeparator + port;
+
+                    if (service.Value.Ttl <= 0)
+                    {
+                        // TTL 0 is a "goodbye": the service is leaving the network
+                        if (discoveredDevices.Remove(key))
+                        {
+                            devicesToUnpublish.Add(key);
+                        }
+                        else
+                        {
+                            logger.Warn("AddNewDevices -- Goodbye received for unknown device: {0}", key);
+                        }
+                    }
+                    else
+                    {
+                        discoveredDevices[key] = new DeviceDetails(key, zconfHost.DisplayName, zconfHost.IPAddress, port,
+                                                                   service.Key, service.Value.Ttl, hostDetails, now);
+                        devicesToPublish.Add(key);
                     }
                 }
             }
 
-            foreach(string newDevice in devicesToPublish)
+            // Raised outside the lock so subscribers can safely call back into the model
+            foreach (string key in devicesToPublish)
             {
-                Publish(newDevice);
+                RaiseDevicePublished(key);
             }
 
-            foreach(string removeDevice in devicesToUnpublish)
+            foreach (string key in devicesToUnpublish)
             {
-                Unpublish(removeDevice);
+                RaiseDeviceUnpublished(key);
             }
-
-            foreach (string removeDevice in devicesToUnpublish)
-            {
-                if (discoveredDevices.ContainsKey(removeDevice))
-                    discoveredDevices.Remove(removeDevice);
-                else
-                    logger.Error("Device Not found in list: {0}", removeDevice);
-            }
-
         }
 
         /// <summary>
-        /// This thread processes expiry of TTl
+        /// Marks devices whose TTL has passed as expired and publishes them again so their details refresh
         /// </summary>
-        /// <param name="state"></param>
-        private void ProcssExpiry(object state)
+        /// <returns>Milliseconds to wait before the next check</returns>
+        internal int ProcessExpiry()
         {
-            int nextWakeup;
-            List<string> toPublish = new List<string>();
+            DateTime now = Clock();
+            double nextWakeupMs = DefaultWakeIntervalMs;
+            var expiredDevices = new List<string>();
 
-            while (!isShutDown)
+            lock (syncRoot)
             {
-                nextWakeup = DEFAULT_WAKE_TIME;
-
-                lock (this)
+                foreach (DeviceDetails device in discoveredDevices.Values)
                 {
-
-                    foreach (var device in discoveredDevices)
+                    // Devices that have already expired are skipped; counting them made the wait
+                    // negative and the loop spin at full CPU
+                    if (device.TTL == DeviceDetails.InvalidTtl || device.Expired)
                     {
-                        logger.Info("ProcssExpiry -- Checking Device for expiration: {0}", device.Key);
-                        if (device.Value.TTL == DeviceDetails.INVALID_TTL)
-                        {
-                            continue;
-                        }
+                        continue;
+                    }
 
-                        var secondsElapsed = (DateTime.Now - device.Value.ReceivedTimestamp).TotalSeconds;
-
-                        if (device.Value.Expired == false
-                            && secondsElapsed > device.Value.TTL)
-                        {
-                            device.Value.SetExpired();
-                            logger.Info("ProcssExpiry -- Device Expired: {0}", device.Key);
-                            toPublish.Add(device.Key);
-                            continue;
-                        }
-
-                        int minWakeup = (int)(device.Value.TTL - secondsElapsed) * SECONDS_TO_MILLISECOND;
-
-                        if (minWakeup <= 0)
-                        {
-                            nextWakeup = 0;
-                        }
-                        else if (nextWakeup > minWakeup)
-                        {
-                            nextWakeup = minWakeup;
-                        }
+                    double secondsLeft = device.TTL - (now - device.ReceivedTimestamp).TotalSeconds;
+                    if (secondsLeft <= 0)
+                    {
+                        device.SetExpired(now);
+                        expiredDevices.Add(device.Key);
+                        logger.Info("ProcessExpiry -- Device expired: {0}", device.Key);
+                    }
+                    else
+                    {
+                        nextWakeupMs = Math.Min(nextWakeupMs, Math.Ceiling(secondsLeft * 1000));
                     }
                 }
-
-                foreach (string key in toPublish)
-                {
-                    Publish(key);
-                }
-
-                toPublish.Clear();
-                Thread.Sleep(nextWakeup);
             }
+
+            foreach (string key in expiredDevices)
+            {
+                RaiseDevicePublished(key);
+            }
+
+            return (int)nextWakeupMs;
         }
 
-        #endregion // Private Members
-
-        #region Internal Members
         /// <summary>
-        ///  Formats device
+        /// Formats host details for display
         /// </summary>
         /// <param name="zconfHost"></param>
-        /// <returns></returns>
-        internal string FormatIZeroConfHost(IZeroconfHost zconfHost)
+        internal static string FormatZeroconfHost(IZeroconfHost zconfHost)
         {
             if (zconfHost == null)
             {
                 return string.Empty;
             }
 
-            StringBuilder sb = new StringBuilder();
+            var sb = new StringBuilder();
             sb.AppendFormat("Display Name: {0}", zconfHost.DisplayName);
             sb.AppendFormat("\nId: {0}", zconfHost.Id);
             sb.AppendFormat("\nIP Address: {0}", zconfHost.IPAddress);
 
-            sb.AppendFormat("\nIP Addresses:");
-            foreach (var ipAddrs in zconfHost.IPAddresses)
+            sb.Append("\nIP Addresses:");
+            foreach (string ipAddress in zconfHost.IPAddresses ?? new string[0])
             {
-                sb.AppendFormat(" {0} ", ipAddrs);
+                sb.AppendFormat(" {0} ", ipAddress);
             }
 
-            sb.AppendFormat("\n\nServices:");
-            foreach (var service in zconfHost.Services)
+            sb.Append("\n\nServices:");
+            foreach (var service in zconfHost.Services ?? new Dictionary<string, IService>())
             {
-                sb.AppendFormat("\n\n ----- Begin -----");
+                if (service.Value == null)
+                {
+                    continue;
+                }
+
+                sb.Append("\n\n ----- Begin -----");
                 sb.AppendFormat("\n Service Key: {0}", service.Key);
                 sb.AppendFormat("\n Service Name: {0}", service.Value.Name);
                 sb.AppendFormat("\n Service Port: {0}", service.Value.Port);
                 sb.AppendFormat("\n Service TTL: {0}", service.Value.Ttl);
-                sb.AppendFormat("\n Service Properties:");
+                sb.Append("\n Service Properties:");
 
-                foreach (var servicePropertyList in service.Value.Properties)
+                foreach (var servicePropertyList in service.Value.Properties ?? new IReadOnlyDictionary<string, string>[0])
                 {
                     foreach (var serviceProperty in servicePropertyList)
                     {
@@ -532,28 +461,145 @@ namespace wpfDiscoverModel
                     }
                 }
 
-                sb.AppendFormat("\n ----- End -----");
-
+                sb.Append("\n ----- End -----");
             }
 
             return sb.ToString();
         }
+        #endregion // Internal Methods
 
-        internal void BubbleError(string error)
+        #region Private Methods
+        /// <summary>
+        /// Checks TTL expiry until the model is disposed
+        /// </summary>
+        private void ExpiryLoop()
         {
-            Error?.Invoke(DateTime.Now.ToString() + SEPERATOR + error);
+            while (!disposeTokenSource.IsCancellationRequested)
+            {
+                int nextWakeupMs = DefaultWakeIntervalMs;
+                try
+                {
+                    nextWakeupMs = ProcessExpiry();
+                }
+                catch (Exception ex)
+                {
+                    // An unhandled exception here would end the whole process
+                    logger.Error(ex, "ExpiryLoop -- Unexpected error while checking TTL expiry");
+                }
+
+                disposeTokenSource.Token.WaitHandle.WaitOne(Math.Max(nextWakeupMs, 0));
+            }
         }
 
-        internal void Publish(string key)
+        /// <summary>
+        /// Keeps a subscription so it can be disposed on shutdown; disposes it at once if discovery has stopped
+        /// </summary>
+        /// <param name="subscription"></param>
+        private void AddSubscription(IDisposable subscription)
         {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(key));
+            lock (syncRoot)
+            {
+                if (isRunning)
+                {
+                    subscriptions.Add(subscription);
+                    return;
+                }
+            }
+
+            DisposeQuietly(subscription);
         }
 
-        internal void UnpublishDevice(string key)
+        /// <summary>
+        /// Stops discovery and forgets all discovered devices
+        /// </summary>
+        private void Shutdown()
         {
-            Unpublish?.Invoke(key);
-        }
-        #endregion // Internal Members
+            List<IDisposable> toDispose;
 
+            lock (syncRoot)
+            {
+                toDispose = new List<IDisposable>(subscriptions);
+                toDispose.Reverse();
+                subscriptions.Clear();
+                resolvedDomains.Clear();
+                discoveredDevices.Clear();
+                isRunning = false;
+            }
+
+            foreach (IDisposable subscription in toDispose)
+            {
+                DisposeQuietly(subscription);
+            }
+
+            RaiseStateChanged(false);
+        }
+
+        private static void DisposeQuietly(IDisposable subscription)
+        {
+            try
+            {
+                subscription?.Dispose();
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "DisposeQuietly -- Failed to dispose a subscription");
+            }
+        }
+
+        /// <summary>
+        /// Formats a service announcement for display
+        /// </summary>
+        /// <param name="sa"></param>
+        private static string FormatServiceAnnouncement(ServiceAnnouncement sa)
+        {
+            var svcAnnouncement = new StringBuilder();
+            svcAnnouncement.AppendFormat("Name: {0}", sa.AdapterInformation.Name);
+            svcAnnouncement.AppendFormat("\n Address: {0}", sa.AdapterInformation.Address);
+            svcAnnouncement.AppendFormat("\n {0}", FormatZeroconfHost(sa.Host));
+
+            return svcAnnouncement.ToString();
+        }
+
+        /// <summary>
+        /// Service announcement callback
+        /// </summary>
+        /// <param name="sa"></param>
+        private void OnAnnouncement(ServiceAnnouncement sa)
+        {
+            if (sa == null)
+            {
+                return;
+            }
+
+            string svcAnnounceDetails = FormatServiceAnnouncement(sa);
+            logger.Info("OnAnnouncement -- {0}", svcAnnounceDetails);
+            RaiseMessage(svcAnnounceDetails);
+        }
+
+        private void RaiseStateChanged(bool state)
+        {
+            StateChanged?.Invoke(state);
+        }
+
+        private void RaiseError(string error)
+        {
+            Error?.Invoke(Clock() + MessageSeparator + error);
+        }
+
+        private void RaiseMessage(string message)
+        {
+            Message?.Invoke(Clock() + MessageSeparator + message);
+        }
+
+        private void RaiseDevicePublished(string key)
+        {
+            DevicePublished?.Invoke(key);
+        }
+
+        private void RaiseDeviceUnpublished(string key)
+        {
+            DeviceUnpublished?.Invoke(key);
+        }
+        #endregion // Private Methods
     }
 }

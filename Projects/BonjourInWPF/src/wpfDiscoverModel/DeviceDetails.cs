@@ -14,85 +14,52 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using System;
-using System.Collections.Generic;
-using System.Text;
-
-using NLog;
-using Zeroconf;
 
 namespace wpfDiscoverModel
 {
     /// <summary>
-    /// This class stores details of discovered device
+    /// Stores the details of one discovered service.
+    /// Not thread-safe on its own: WpfDiscoverModel only uses it while holding its lock.
     /// </summary>
-    class DeviceDetails 
+    internal class DeviceDetails
     {
-        #region Private Members
-        private static readonly NLog.Logger logger = NLog.LogManager.GetCurrentClassLogger();
-        private string ServiceDetails;
-        private readonly WpfDiscoverModel wpfDiscModel;
-        #endregion // Private Members
+        #region Constants
+        public const int InvalidTtl = -1;
+        #endregion // Constants
 
-        #region Public Members
-        public string Key { get; private set; }
-        public string Domain { get; private set; }
-        public string Service { get; private set; }
-        public string Name { get; private set; }
-        public string IP { get; private set; }
-        public string Id { get; private set; }
-        public int TTL { get; private set; }
+        #region Public Properties
+        public string Key { get; }
+        public string Name { get; }
+        public string IPAddress { get; }
+        public string Port { get; }
+        public string ServiceType { get; }
+        public int TTL { get; }
+        public DateTime ReceivedTimestamp { get; }
         public bool Expired { get; private set; }
-        public DateTime ReceivedTimestamp { get; private set; }
-        public const int INVALID_TTL = -1;
-        #endregion //Public Members
+        public string ServiceDetails { get; private set; }
+        #endregion // Public Properties
 
-        #region Construction 
-
-        public DeviceDetails(WpfDiscoverModel wpfdiscModelParam, string key, string service, string domain, 
-                             string name, string ip, string id, int ttl, string serviceDetails)
+        #region Construction
+        public DeviceDetails(string key, string name, string ipAddress, string port, string serviceType,
+                             int ttl, string hostDetails, DateTime receivedTimestamp)
         {
-            wpfDiscModel = wpfdiscModelParam;
             Key = key;
-            Domain = domain;
-            Service = service;
             Name = name;
-            IP = ip;
-            Id = id;
+            IPAddress = ipAddress;
+            Port = port;
+            ServiceType = serviceType;
             TTL = ttl;
-            ServiceDetails = serviceDetails;
-            ReceivedTimestamp = DateTime.Now;
-            ServiceDetails += "\n\nTimestamp: " + ReceivedTimestamp.ToString();
+            ReceivedTimestamp = receivedTimestamp;
+            ServiceDetails = hostDetails + "\n\nTimestamp: " + receivedTimestamp;
         }
         #endregion // Construction
 
         #region Public Methods
-        public string GetCompleteDeviceData()
-        {
-            StringBuilder deviceData = new StringBuilder();
-            deviceData.AppendFormat("\nName: {0}", Name);
-            deviceData.AppendFormat("\nKey: {0}", Key);
-            deviceData.AppendFormat("\nDomain: {0}", Domain);
-            deviceData.AppendFormat("\nService: {0}", Service);
-            deviceData.AppendFormat("\n\n {0}", ServiceDetails);
-
-            return deviceData.ToString();
-        }
-
-        public string GetDeviceDetails()
-        {
-            lock (wpfDiscModel)
-            {
-                return ServiceDetails;
-            }
-
-        }
-
-        public void SetExpired()
+        public void SetExpired(DateTime expiredAt)
         {
             Expired = true;
-            ServiceDetails += "\n\n TTL Expired: " + DateTime.Now.ToString();
+            ServiceDetails += "\n\n TTL Expired: " + expiredAt;
         }
-
         #endregion // Public Methods
     }
 }

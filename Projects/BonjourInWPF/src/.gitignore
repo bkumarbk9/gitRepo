@@ -1,0 +1,3 @@
+# NuGet packages are restored automatically by Visual Studio (packages.config restore)
+# or with: msbuild wpfDiscover.sln -t:restore -p:RestorePackagesConfig=true
+packages/

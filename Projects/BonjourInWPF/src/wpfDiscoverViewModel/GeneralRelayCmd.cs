@@ -14,36 +14,39 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Input;
 
 namespace wpfDiscoverViewModel
 {
     /// <summary>
-    /// General Relay command class for binding Vew events to Model actions
+    /// General relay command for binding View events to Model actions
     /// </summary>
-    class GeneralRelayCmd : ICommand
+    internal class GeneralRelayCmd : ICommand
     {
         private readonly Action<object> action;
 
         public GeneralRelayCmd(Action<object> actionParam)
         {
-            action = actionParam;
+            action = actionParam ?? throw new ArgumentNullException(nameof(actionParam));
         }
 
-        #region ICommand Members  
+        #region ICommand Members
         public bool CanExecute(object parameter)
         {
             return true;
         }
-        public event EventHandler CanExecuteChanged;
+
+        // The command can always execute, so this event never needs to be raised
+        public event EventHandler CanExecuteChanged
+        {
+            add { }
+            remove { }
+        }
+
         public void Execute(object parameter)
         {
             action(parameter);
         }
-        #endregion
+        #endregion // ICommand Members
     }
 }

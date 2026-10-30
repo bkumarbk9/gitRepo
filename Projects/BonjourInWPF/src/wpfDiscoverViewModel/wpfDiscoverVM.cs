@@ -15,51 +15,54 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Windows.Input;
 using System.Collections.ObjectModel;
-using System.Windows.Data;
 using System.ComponentModel;
+using System.Linq;
+using System.Windows.Data;
+using System.Windows.Input;
 
 using NLog;
 using wpfDiscoverModel;
 
-/// <summary>
-/// This is Model-View for WPFDiscover MVVM 
-/// </summary>
-
 namespace wpfDiscoverViewModel
 {
     /// <summary>
-    /// WPF Discover View- Model class
+    /// WPF Discover View-Model class
     /// </summary>
-    public class WpfDiscoverVM : INotifyPropertyChanged
+    public class WpfDiscoverVM : INotifyPropertyChanged, IDisposable
     {
         #region Bound ICommand interfaces
-
-        // Bind to On Off switch
-        public ICommand OnOffCommand { get; private set; }
-        // Bind to Selected device
-        public ICommand GetSelectedItemProp { get; private set; }
-        // For resetting
-        public ICommand ResetCommand { get; private set; }
-
+        // Bound to the On/Off switch
+        public ICommand OnOffCommand { get; }
+        // Bound to the selected device
+        public ICommand GetSelectedItemProp { get; }
+        // Bound to the Apply button of the advanced options
+        public ICommand ResetCommand { get; }
         #endregion // Bound ICommand interfaces
 
-        /// <summary>
-        /// These Properties are bind to XAML GUI view
-        /// </summary>
         #region Bound properties
-
-        public ObservableCollection<DiscoveredDevice> DiscoveredDevices { get; private set; }
+        public ObservableCollection<DiscoveredDevice> DiscoveredDevices { get; }
         public string DeviceDetails { get; set; }
         public DiscoveredDevice SelectedItem { get; set; }
         public bool OnOffSwitch { get; set; }
-        public long TimeSpan { get; set; }
+        public int ScanTimeSeconds { get; set; }
         public int RetryCount { get; set; }
         public int RetryInMs { get; set; }
-        public string ErrorDetails { get; set; }
         public string ErrorPaneColor { get; set; }
+
+        /// <summary>
+        /// Errors and informational messages, newest last; only the most recent ones are kept
+        /// </summary>
+        public string Messages
+        {
+            get
+            {
+                lock (messages)
+                {
+                    return string.Join(Environment.NewLine, messages);
+                }
+            }
+        }
 
         public bool ErrorPaneActive
         {
@@ -70,235 +73,220 @@ namespace wpfDiscoverViewModel
 
             set
             {
-                if (value == true && ErrorDetails?.Count() > 0)
+                if (value && ErrorPaneColor == ErrorColor)
                 {
-                    ErrorPaneColor = ERROR_ACK;
-                    BubblePropertyChanged("ErrorPaneColor");
+                    ErrorPaneColor = ErrorSeenColor;
+                    RaisePropertyChanged(nameof(ErrorPaneColor));
                 }
                 errorPaneActive = value;
             }
         }
-
         #endregion // Bound Properties
 
         #region Property Changed Event
         public event PropertyChangedEventHandler PropertyChanged;
-        #endregion // Prop changed event
+        #endregion // Property Changed Event
 
         #region Private Members
+        private static readonly Logger logger = LogManager.GetCurrentClassLogger();
+        private readonly WpfDiscoverModel discoverModel;
 
-        private static readonly NLog.Logger logger = NLog.LogManager.GetCurrentClassLogger();
+        // Guards DiscoveredDevices (shared with WPF through EnableCollectionSynchronization) and publishedDevices
+        private readonly object devicesLock = new object();
+        private readonly HashSet<string> publishedDevices = new HashSet<string>();
+        private readonly Queue<string> messages = new Queue<string>();
         private bool errorPaneActive;
-        private WpfDiscoverModel discoverModel;
-        private HashSet<string> publishedDevices = new HashSet<string>();
-        private readonly bool  initComplete = false;
-
         #endregion // Private Members
 
         #region Private Constants
-
-        private const string NO_ERROR = "Green";    // When no error occured
-        private const string ERROR = "Red";         // When Error occured 
-        private const string ERROR_ACK = "Black";   // When Error is seen by user
-
+        private const int MaxMessages = 500;
+        private const string NoErrorColor = "Green";   // No error has occurred
+        private const string ErrorColor = "Red";       // An error has occurred
+        private const string ErrorSeenColor = "Black"; // The user has seen the error
         #endregion // Private Constants
 
         #region Model-View Construction
         public WpfDiscoverVM()
         {
-            logger.Info("Construction of WpfDiscoverVM");
+            logger.Info("WpfDiscoverVM -- Construction");
 
-            // Create and initialize, subscribe to Model
-            discoverModel = new WpfDiscoverModel();
+            // Everything the model's events touch is created first: discovery starts at the end
+            // and may report devices on background threads straight away
+            DiscoveredDevices = new ObservableCollection<DiscoveredDevice>();
+            BindingOperations.EnableCollectionSynchronization(DiscoveredDevices, devicesLock);
+            ErrorPaneColor = NoErrorColor;
             OnOffSwitch = true;
-            ErrorPaneColor = NO_ERROR;
-            discoverModel.PropertyChanged += DiscoverModel_PublishDevice;
+
+            discoverModel = new WpfDiscoverModel();
+            discoverModel.DevicePublished += DiscoverModel_DevicePublished;
+            discoverModel.DeviceUnpublished += DiscoverModel_DeviceUnpublished;
             discoverModel.StateChanged += DiscoverModel_StateChanged;
-            discoverModel.Unpublish += DiscoverModel_Unpublish;
             discoverModel.Error += DiscoverModel_Error;
+            discoverModel.Message += DiscoverModel_Message;
+
+            OnOffCommand = new GeneralRelayCmd(isOn => discoverModel.OnOff(IsTrue(isOn)));
+            GetSelectedItemProp = new GeneralRelayCmd(UpdateSelectedItemDetails);
+            ResetCommand = new GeneralRelayCmd(Reset);
+
             discoverModel.Init();
 
-            // Bind commands
-            OnOffCommand = new GeneralRelayCmd(new Action<object>(discoverModel.OnOff));
-            GetSelectedItemProp = new GeneralRelayCmd(new Action<object>(UpdateSelectedItemDetails));
-            ResetCommand = new GeneralRelayCmd(new Action<object>(Reset));
-
-            // Initialize view elements
-            DiscoveredDevices = new ObservableCollection<DiscoveredDevice>();
-            BindingOperations.EnableCollectionSynchronization(DiscoveredDevices, this);
-            initComplete = true;
-
-            logger.Info("Construction of WpfDiscoverVM, Complete");
+            logger.Info("WpfDiscoverVM -- Construction complete");
         }
-        #endregion // Model-View construction
+        #endregion // Model-View Construction
+
+        #region Public Methods
+        public void Dispose()
+        {
+            discoverModel.Dispose();
+        }
+        #endregion // Public Methods
 
         #region Model-View bound Events
-
         /// <summary>
-        /// Event for bubbling Errors to View layer
+        /// Shows an error and flags the Messages pane
         /// </summary>
         /// <param name="error"></param>
         private void DiscoverModel_Error(string error)
         {
-            if (!initComplete)
-            {
-                return;
-            }
-
-            ErrorDetails += error + "\r\n";
-            BubblePropertyChanged("ErrorDetails");
+            AddMessage(error);
             if (!errorPaneActive)
             {
-                ErrorPaneColor = ERROR;
-                BubblePropertyChanged("ErrorPaneColor");
+                ErrorPaneColor = ErrorColor;
+                RaisePropertyChanged(nameof(ErrorPaneColor));
             }
-            logger.Error("DiscoverModel_Error -- Error Reported: [{0}]", error);
+            logger.Error("DiscoverModel_Error -- Error reported: [{0}]", error);
         }
 
         /// <summary>
-        /// When new changes are applied, Application is reset
+        /// Shows an informational message without flagging it as an error
         /// </summary>
-        /// <param name="resetState"></param>
-        private void Reset(object resetState)
+        /// <param name="message"></param>
+        private void DiscoverModel_Message(string message)
         {
-            logger.Info("Reset -- Reset started");
-
-            if (false == UpdateModelConfig())
-            {
-                return;
-            }
-
-            discoverModel.Reset(resetState);
-
-            logger.Info("Reset -- Reset Complete");
+            AddMessage(message);
         }
 
         /// <summary>
-        /// When User or System changes from On to Off 
+        /// When the user or the system switches discovery on or off
         /// </summary>
-        /// <param name="stateChanged"></param>
-        private void DiscoverModel_StateChanged(bool stateChanged)
+        /// <param name="isOn"></param>
+        private void DiscoverModel_StateChanged(bool isOn)
         {
-            if (!initComplete)
+            if (!isOn)
             {
-                return;
-            }
-
-            if (!stateChanged)
-            {
-                // Erace all devices from view as switch off action is triggered
-                DeviceDetails = string.Empty;
-                DiscoveredDevices.Clear();
-                lock (publishedDevices)
+                // Erase all devices from the view as discovery has stopped
+                lock (devicesLock)
                 {
+                    DiscoveredDevices.Clear();
                     publishedDevices.Clear();
                 }
-                BubblePropertyChanged("DeviceDetails");
+                DeviceDetails = string.Empty;
+                RaisePropertyChanged(nameof(DeviceDetails));
                 logger.Info("DiscoverModel_StateChanged -- State changed to Off");
             }
 
-            // Propogate On/Off switch sstatus to view
-            OnOffSwitch = stateChanged;
-            BubblePropertyChanged("OnOffSwitch");
+            // Propagate the On/Off switch status to the view
+            OnOffSwitch = isOn;
+            RaisePropertyChanged(nameof(OnOffSwitch));
         }
 
         /// <summary>
-        /// When a new device is discoverd,this event is triggered
+        /// When a device is discovered or its details change
         /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private void DiscoverModel_PublishDevice(object sender, System.ComponentModel.PropertyChangedEventArgs e)
+        /// <param name="deviceKey"></param>
+        private void DiscoverModel_DevicePublished(string deviceKey)
         {
-            if (!initComplete)
+            DiscoveredDevice device = discoverModel.GetDiscoveredDevice(deviceKey);
+            if (device == null)
             {
                 return;
             }
 
-            if (e == null)
-            {
-                return;
-            }
+            bool isNewDevice;
+            bool isFirstDevice = false;
 
-            DiscoveredDevice device = discoverModel.GetDiscoveredDevice(e.PropertyName);
-
-            lock (publishedDevices)
+            lock (devicesLock)
             {
-                if (device == null || publishedDevices.Contains(device.Key))
+                isNewDevice = publishedDevices.Add(device.Key);
+                if (isNewDevice)
                 {
-                    if (SelectedItem != null && SelectedItem.Key == e.PropertyName)
-                    {
-                        UpdateSelectedItemDetails(device);
-                    }
-
-                    return;
-                }
-                publishedDevices.Add(device.Key);
-            }
-            // Publish Device
-            logger.Info("DiscoverModel_PublishDevice -- New Device discovered: {0} Device Name: ", device.Key, device.Name);
-
-            DiscoveredDevices.Add(device);
-            BubblePropertyChanged("DiscoveredDevices");
-
-            lock (publishedDevices)
-            {
-                if (publishedDevices.Count() > 1)
-                {
-                    return;
+                    DiscoveredDevices.Add(device);
+                    isFirstDevice = DiscoveredDevices.Count == 1;
                 }
             }
 
-            // Update PUblished device details
-            logger.Info("DiscoverModel_PublishDevice -- Publishing New Device details: {0} Device Name: ", device.Key, device.Name);
-            SelectedItem = device;
-            BubblePropertyChanged("SelectedItem");
-            UpdateSelectedItemDetails(device);
+            if (isNewDevice)
+            {
+                logger.Info("DiscoverModel_DevicePublished -- New device discovered: {0}, device name: {1}", device.Key, device.Name);
+            }
+
+            if (isFirstDevice)
+            {
+                // Select the first device so its details show straight away
+                SelectedItem = device;
+                RaisePropertyChanged(nameof(SelectedItem));
+            }
+
+            DiscoveredDevice selected = SelectedItem;
+            if (selected != null && selected.Key == device.Key)
+            {
+                UpdateSelectedItemDetails(device);
+            }
         }
 
-        private void DiscoverModel_Unpublish(string deviceKey)
+        /// <summary>
+        /// When a device announces that it is leaving the network
+        /// </summary>
+        /// <param name="deviceKey"></param>
+        private void DiscoverModel_DeviceUnpublished(string deviceKey)
         {
-            logger.Info("DiscoverModel_Unpublish -- Unpublishing New Device details: {0} Device Name: ", deviceKey);
+            logger.Info("DiscoverModel_DeviceUnpublished -- Removing device: {0}", deviceKey);
 
-            lock (publishedDevices)
+            lock (devicesLock)
             {
-                if (publishedDevices.Contains(deviceKey))
+                if (!publishedDevices.Remove(deviceKey))
                 {
-                    publishedDevices.Remove(deviceKey);
+                    logger.Warn("DiscoverModel_DeviceUnpublished -- Device not found: {0}", deviceKey);
+                    return;
                 }
-                else
+
+                DiscoveredDevice deviceToRemove = DiscoveredDevices.FirstOrDefault(item => item.Key == deviceKey);
+                if (deviceToRemove != null)
                 {
-                    logger.Error("DiscoverModel_Unpublish -- Device not found to unpublish: {0}", deviceKey);
+                    DiscoveredDevices.Remove(deviceToRemove);
                 }
             }
-
-            DiscoveredDevice deviceToRemove = DiscoveredDevices.FirstOrDefault(item => item.Key == deviceKey);
-            if (deviceToRemove == null)
-            {
-                logger.Error("DiscoverModel_Unpublish -- Device not found to remove from GUI: {0}", deviceKey);
-                return;
-            }
-
-            DiscoveredDevices.Remove(deviceToRemove);
-            BubblePropertyChanged("DiscoveredDevices");
         }
-
         #endregion // Model-View bound Events
 
         #region Private Methods
-
-        private void BubblePropertyChanged(string property)
+        /// <summary>
+        /// Applies the advanced options by restarting discovery
+        /// </summary>
+        /// <param name="isOn">Current state of the On/Off switch</param>
+        private void Reset(object isOn)
         {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(property));
+            logger.Info("Reset -- Reset started");
+
+            if (!UpdateModelConfig())
+            {
+                logger.Info("Reset -- No advanced options entered, nothing to apply");
+                return;
+            }
+
+            discoverModel.Reset(IsTrue(isOn));
+
+            logger.Info("Reset -- Reset complete");
         }
 
         private bool UpdateModelConfig()
         {
-            if (this.TimeSpan == 0 && RetryCount == 0 && RetryInMs == 0)
+            if (ScanTimeSeconds == 0 && RetryCount == 0 && RetryInMs == 0)
             {
                 return false;
             }
 
-            discoverModel.ScanTime = new TimeSpan(this.TimeSpan);
+            discoverModel.ScanTime = TimeSpan.FromSeconds(ScanTimeSeconds);
             discoverModel.RetryCount = RetryCount;
             discoverModel.RetryDelayInMs = RetryInMs;
 
@@ -307,18 +295,35 @@ namespace wpfDiscoverViewModel
 
         private void UpdateSelectedItemDetails(object selectedDevice)
         {
-            if (!initComplete)
+            if (selectedDevice is DiscoveredDevice device)
             {
-                return;
-            }
-
-            if (selectedDevice is DiscoveredDevice)
-            {
-                DeviceDetails = discoverModel.GetDeviceDetails(((DiscoveredDevice)selectedDevice).Key);
-                BubblePropertyChanged("DeviceDetails");
+                DeviceDetails = discoverModel.GetDeviceDetails(device.Key);
+                RaisePropertyChanged(nameof(DeviceDetails));
             }
         }
 
+        private void AddMessage(string message)
+        {
+            lock (messages)
+            {
+                messages.Enqueue(message);
+                while (messages.Count > MaxMessages)
+                {
+                    messages.Dequeue();
+                }
+            }
+            RaisePropertyChanged(nameof(Messages));
+        }
+
+        private void RaisePropertyChanged(string property)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(property));
+        }
+
+        private static bool IsTrue(object value)
+        {
+            return value is bool flag && flag;
+        }
         #endregion // Private Methods
     }
 }

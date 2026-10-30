@@ -6,8 +6,8 @@ Free demo projects that show how to use different technologies, from cloud AI se
 |---|---|---|---|
 | [Azure AI Document Reader](Projects/AzureDocIntelligence) | Cloud AI, REST API | C# 14, .NET 10, ASP.NET Core, Azure AI Document Intelligence, Azure Container Apps, Docker | AGPL-3.0 |
 | [REST API Health Monitor](Projects/rest-api-health-monitor) | Web app, monitoring | TypeScript, Angular 22 (signals), Vitest, Azure Static Web Apps, GitHub Actions | AGPL-3.0 |
+| [Cloud Spreadsheet](Projects/CloudSpreadsheet) | Real-time web, collaboration | C#, .NET 10, ASP.NET Core WebSockets, JavaScript, MSTest, Azure Container Apps | AGPL-3.0 |
 | [Bonjour in WPF](Projects/BonjourInWPF) | Desktop, networking | C#, WPF, .NET Framework 4.8, MVVM, Zeroconf, Telerik UI for WPF | AGPL-3.0 |
-| [Cloud Spreadsheet](LegacyProjects/prototypeProjects/CloudSpreadsheet) *(prototype)* | Real-time web | HTML5, JavaScript, WebSockets, C# server | AGPL-3.0 |
 
 ---
 
@@ -46,15 +46,15 @@ A live, browser-based dashboard built with **Angular 22** that checks websites a
 
 ![REST API Health Monitor dashboard showing four endpoint cards with status, latency charts, status timelines and a failure record with a Clear button](Projects/rest-api-health-monitor/doc/img/screenshot.png)
 
+## Cloud Spreadsheet
+📁 [`Projects/CloudSpreadsheet`](Projects/CloudSpreadsheet)
+
+A real-time, collaborative spreadsheet in the browser, like a small Google Sheets. Everyone on the same sheet sees edits instantly over **WebSockets**. It supports Google Sheets-style formulas (`=SUM(C2:C7)`) and whole-column formulas, saves automatically, and disconnects idle tabs so it can scale to zero on **Azure Container Apps**. Built with **ASP.NET Core on .NET 10**, its own formula engine, and a plain JavaScript client. It is a 2026 rewrite of a 2015 CodeProject article; the original code and article are preserved in [`LegacyProjects/prototypeProjects/CloudSpreadsheet`](LegacyProjects/prototypeProjects/CloudSpreadsheet).
+
 ## Bonjour in WPF
 📁 [`Projects/BonjourInWPF`](Projects/BonjourInWPF)
 
 A Windows desktop tool that uses **mDNS (Bonjour/Zeroconf)** to discover the devices and services on your local network, such as printers, with no configuration. It's built with **WPF** using the MVVM pattern (separate View, ViewModel and Model projects) and **Telerik UI for WPF** controls. Ready-to-run binaries are included in `DemoBinaries`. Building from source requires a Telerik UI for WPF installation.
-
-## Cloud Spreadsheet *(prototype)*
-📁 [`LegacyProjects/prototypeProjects/CloudSpreadsheet`](LegacyProjects/prototypeProjects/CloudSpreadsheet)
-
-A lightweight, real-time online spreadsheet that pushes cell updates to all connected browsers over **WebSockets**, demonstrating low-latency synchronization techniques. It includes an HTML/JavaScript client, a C# WebSocket server and a C# spreadsheet service, plus the original CodeProject article (preserved as a PDF).
 
 ---
 

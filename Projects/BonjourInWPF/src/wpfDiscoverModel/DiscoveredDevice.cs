@@ -18,93 +18,72 @@ using System.IO;
 
 namespace wpfDiscoverModel
 {
+    /// <summary>
+    /// Summary of a discovered device, shown in the device list
+    /// </summary>
     public class DiscoveredDevice
     {
         #region Private Constants
-        private const string PRINTER_IMG = @"\images\printer.png";
-        private const string HTTP_IMG = @"\images\http.png";
-        private const string UNKNOWN_IMG = @"\images\unknown.png";
-        private const string SCANNER_IMG = @"\images\scan.png";
-        private const string NVIDEA_IMG = @"\images\nvidea.png";
-        private const string APPLE_IMG = @"\images\apple.png";
-        private const string CLOUD_PRINTER_IMG = @"\images\print-cloud.png";
-        private const string SMB_IMG = @"\images\smbShare.png";
+        // Icons are copied next to the executable, so resolve them from there rather than the
+        // current directory, which differs when the app is started from a shortcut
+        private static readonly string ImagesDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "images");
+        private const string UnknownImage = "unknown.png";
 
-        private const string PRINTER_SIGNATURE = "_printer.";
-        private const string PRINTER_SIGNATURE_ALT = "_pdl-datastream.";
-        private const string PRINTER_SIGNATURE_ALT1 = "_ipp.";
-        private const string PRINTER_SIGNATURE_ALT2 = "_ipps.";
+        // Service-type prefixes and the icon shown for them, checked in order
+        private static readonly (string Signature, string Image)[] ImageBySignature =
+        {
+            ("_printer.", "printer.png"),
+            ("_pdl-datastream.", "printer.png"),
+            ("_ipp.", "printer.png"),
+            ("_ipps.", "printer.png"),
+            ("_http.", "http.png"),
+            ("_scanner.", "scan.png"),
+            ("_uscans.", "scan.png"),
+            ("_uscan.", "scan.png"),
+            ("_nvstream_dbd.", "nvidia.png"),
+            ("_companion-link.", "apple.png"),
+            ("_privet.", "print-cloud.png"),
+            ("_smb.", "smbShare.png"),
+        };
+        #endregion // Private Constants
 
-        private const string HTTP_SIGNATURE = "_http.";
-        private const string SCANNER_SIGNATURE = "_scanner.";
-        private const string SCANNER_SIGNATURE_ALT = "_uscans.";
-        private const string SCANNER_SIGNATURE_ALT1 = "_uscan.";
-        private const string NVIDIA_SIGNATURE = "_nvstream_dbd.";
-        private const string APPLE_PRODUCT_SIGNATURE = "_companion-link.";
-        private const string CLOUD_PRINTER_SIGNATURE = "_privet.";
-        private const string SMB_SHARE_SIGNATURE = "_smb.";
-        #endregion// Private Constants
-
-        private static string currentDir = Directory.GetCurrentDirectory();
-
-        #region Exposed public properties
-        public string Key { get; private set; }
-        public string Name { get; private set; }
-        public string Domain { get; private set; }
-        public string Service { get; private set; }
-        public string DeviceImage { get; private set; }
-        #endregion // Public propeties
+        #region Public Properties
+        public string Key { get; }
+        public string Name { get; }
+        public string IPAddress { get; }
+        public string Port { get; }
+        public string ServiceType { get; }
+        public string DeviceImage { get; }
+        #endregion // Public Properties
 
         #region Construction
-        public DiscoveredDevice(string key, string name, string domain, string service, string id)
+        public DiscoveredDevice(string key, string name, string ipAddress, string port, string serviceType)
         {
-            this.Key = key;
-            this.Name = name;
-            this.Domain = domain;
-            this.Service = service;
-            SetDefaultImage(id);
+            Key = key;
+            Name = name;
+            IPAddress = ipAddress;
+            Port = port;
+            ServiceType = serviceType;
+            DeviceImage = Path.Combine(ImagesDirectory, GetImageName(serviceType));
         }
-
         #endregion // Construction
 
-        #region Private Method
-        private void SetDefaultImage(string Id)
+        #region Private Methods
+        private static string GetImageName(string serviceType)
         {
-            if (Id.StartsWith(PRINTER_SIGNATURE) || Id.StartsWith(PRINTER_SIGNATURE_ALT)
-             || Id.StartsWith(PRINTER_SIGNATURE_ALT1) || Id.StartsWith(PRINTER_SIGNATURE_ALT2))
+            if (serviceType != null)
             {
-                DeviceImage = currentDir + PRINTER_IMG;
+                foreach (var entry in ImageBySignature)
+                {
+                    if (serviceType.StartsWith(entry.Signature, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return entry.Image;
+                    }
+                }
             }
-            else if (Id.StartsWith(HTTP_SIGNATURE))
-            {
-                DeviceImage = currentDir + HTTP_IMG;
-            }
-            else if (Id.StartsWith(SCANNER_SIGNATURE) || Id.StartsWith(SCANNER_SIGNATURE_ALT)
-                || Id.StartsWith(SCANNER_SIGNATURE_ALT1))
-            {
-                DeviceImage = currentDir + SCANNER_IMG;
-            }
-            else if (Id.StartsWith(NVIDIA_SIGNATURE))
-            {
-                DeviceImage = currentDir + NVIDEA_IMG;
-            }
-            else if (Id.StartsWith(APPLE_PRODUCT_SIGNATURE))
-            {
-                DeviceImage = currentDir + APPLE_IMG;
-            }
-            else if (Id.StartsWith(CLOUD_PRINTER_SIGNATURE))
-            {
-                DeviceImage = currentDir + CLOUD_PRINTER_IMG;
-            }
-            else if (Id.StartsWith(SMB_SHARE_SIGNATURE))
-            {
-                DeviceImage = currentDir + SMB_IMG;
-            }
-            else
-            {
-                DeviceImage = currentDir + UNKNOWN_IMG;
-            }
+
+            return UnknownImage;
         }
-        #endregion // Private Method
+        #endregion // Private Methods
     }
 }

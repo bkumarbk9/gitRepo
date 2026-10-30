@@ -1,0 +1,21 @@
+<!--
+  Copyright (C) 2026 Bharath K A (bkumarbk9)
+  SPDX-License-Identifier: AGPL-3.0-only
+
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU Affero General Public License version 3
+  as published by the Free Software Foundation.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU Affero General Public License for more details.
+
+  You should have received a copy of the GNU Affero General Public License
+  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <rect x="2" y="3" width="28" height="26" rx="4" fill="#188038"/>
+  <rect x="6" y="8" width="20" height="17" rx="1.5" fill="#fff"/>
+  <path d="M6 13.5h20M6 19h20M13 8v17M19.5 8v17" stroke="#188038" stroke-width="1.6"/>
+</svg>

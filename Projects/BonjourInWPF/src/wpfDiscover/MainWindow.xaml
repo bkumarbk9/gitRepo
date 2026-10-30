@@ -14,7 +14,7 @@
   You should have received a copy of the GNU Affero General Public License
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -->
-<telerik:RadWindow Name="mainwWnd"
+<telerik:RadWindow Name="mainWnd"
                    FontSize="14"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -52,10 +52,10 @@
 
                 <TextBlock Grid.Row="3" Grid.Column="1" Text="IP Address: " Margin="10,0,0,0"/>
                 <TextBlock Grid.Row="3" Grid.Column="1" FontStyle="Oblique" Foreground="SteelBlue" Margin="80,0,0,0" 
-                Text="{Binding Service}"/>
+                Text="{Binding IPAddress}"/>
                 <TextBlock Grid.Row="3" Grid.Column="2" Text="Port: " Margin="10,0,0,0"/>
                 <TextBlock Grid.Row="3" FontStyle="Oblique" Foreground="SteelBlue" Grid.Column="2" Margin="44,0,0,0" 
-                Text="{Binding Domain}" />
+                Text="{Binding Port}" />
             </Grid>
         </DataTemplate>
     </telerik:RadWindow.Resources>
@@ -78,9 +78,9 @@
                     </telerik:RadPane>
                     <telerik:RadPane Name ="errorPane" Selector.IsSelected="{Binding ErrorPaneActive, Mode=OneWayToSource}"
                                  Foreground="{Binding ErrorPaneColor, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
-                                 Header="Error details" CanUserClose="False" CanUserPin="False" CanFloat="False" >
-                        <TextBox x:Name="errorDisplay" IsReadOnly="True" Foreground="Red" VerticalContentAlignment="Top"  
-                                                Text="{Binding ErrorDetails, Mode=TwoWay,UpdateSourceTrigger=PropertyChanged}"
+                                 Header="Messages" CanUserClose="False" CanUserPin="False" CanFloat="False" >
+                        <TextBox x:Name="messagesDisplay" IsReadOnly="True" VerticalContentAlignment="Top"  
+                                                Text="{Binding Messages, Mode=OneWay}"
                                                 VerticalScrollBarVisibility="Auto">
                         </TextBox>
 
@@ -95,7 +95,7 @@
                 <telerik:RadPane Header="Menu" Name ="menuPane" Margin="0,0,0.2,0" CanUserClose="False"  CanUserPin="False" CanFloat="False" >
                     <telerik:RadLayoutControl SelectedItem="{x:Null}" Orientation="Vertical">
                         <telerik:RadToggleSwitchButton Name="onOffButton" 
-                                                       FontSize="{Binding FontSize, Mode=OneWay, ElementName=mainwWnd}"
+                                                       FontSize="{Binding FontSize, Mode=OneWay, ElementName=mainWnd}"
                                                        VerticalAlignment="Top" HorizontalAlignment="Center" Margin="20,40,20,0" CheckedContent="_On" 
                                                        UncheckedContent="O_ff" ContentPosition="Both" 
                                                        IsThreeState="False"
@@ -118,13 +118,13 @@
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
                                 </Grid.RowDefinitions>
-                                <telerik:RadWatermarkTextBox Grid.Row="0" Name="scanTime" WatermarkContent="Scan Time (ticks)" Margin="3,10,3,3" VerticalAlignment="Top"
+                                <telerik:RadWatermarkTextBox Grid.Row="0" Name="scanTime" WatermarkContent="Scan Time (seconds)" Margin="3,10,3,3" VerticalAlignment="Top"
                                                      Visibility="{Binding Path=IsChecked, FallbackValue=true, ElementName=advancedButton, Converter={StaticResource VisibleIfTrueConverter}}"
-                                                             Text="{Binding Path = TimeSpan, Mode=OneWayToSource}"/>
+                                                             Text="{Binding Path = ScanTimeSeconds, Mode=OneWayToSource}"/>
                                 <telerik:RadWatermarkTextBox Grid.Row="1" Name="noOfRetries" WatermarkContent="Retry Count" Margin="3" VerticalAlignment="Top"
                                                      Visibility="{Binding Path=IsChecked, FallbackValue=true, ElementName=advancedButton, Converter={StaticResource VisibleIfTrueConverter}}"
                                                              Text="{Binding Path = RetryCount, Mode=OneWayToSource}" />
-                                <telerik:RadWatermarkTextBox Grid.Row="2" Name="retryDElay" WatermarkContent="Retry Delay (ms)" Margin="3" VerticalAlignment="Top"
+                                <telerik:RadWatermarkTextBox Grid.Row="2" Name="retryDelay" WatermarkContent="Retry Delay (ms)" Margin="3" VerticalAlignment="Top"
                                                      Visibility="{Binding Path=IsChecked, FallbackValue=true, ElementName=advancedButton, Converter={StaticResource VisibleIfTrueConverter}}"
                                                              Text="{Binding Path = RetryInMs, Mode=OneWayToSource}"/>
                                 <telerik:RadButton Grid.Row="3"  VerticalAlignment="Top" Content="A_pply" Margin="3" 

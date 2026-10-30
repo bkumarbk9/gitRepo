@@ -19,6 +19,9 @@ using System.Runtime.InteropServices;
 // COM, set the ComVisible attribute to true on that type.
 [assembly: ComVisible(false)]
 
+// Lets the unit tests use the internal test hooks (clock, ProcessExpiry, AddNewDevices)
+[assembly: InternalsVisibleTo("wpfDiscoverModel.Tests")]
+
 // The following GUID is for the ID of the typelib if this project is exposed to COM
 [assembly: Guid("8ae5fdc0-8751-47cb-9735-69a80d38c35d")]
 

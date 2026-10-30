@@ -16,6 +16,11 @@
     <Deterministic>true</Deterministic>
     <TargetFrameworkProfile />
   </PropertyGroup>
+  <PropertyGroup>
+    <!-- Telerik UI for WPF install folder. Override it for another version or location:
+         msbuild /p:TelerikDir=...  or set a TelerikDir environment variable -->
+    <TelerikDir Condition=" '$(TelerikDir)' == '' ">C:\Program Files (x86)\Progress\Telerik UI for WPF R1 2020\</TelerikDir>
+  </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
     <DebugSymbols>true</DebugSymbols>
@@ -73,22 +78,22 @@
       <RequiredTargetFramework>4.0</RequiredTargetFramework>
     </Reference>
     <Reference Include="Telerik.Windows.Controls">
-      <HintPath>C:\Program Files (x86)\Progress\Telerik UI for WPF R1 2020\Binaries\WPF45\Telerik.Windows.Controls.dll</HintPath>
+      <HintPath>$(TelerikDir)Binaries\WPF45\Telerik.Windows.Controls.dll</HintPath>
     </Reference>
     <Reference Include="Telerik.Windows.Controls.Docking">
-      <HintPath>C:\Program Files (x86)\Progress\Telerik UI for WPF R1 2020\Binaries.NoXaml\WPF45\Telerik.Windows.Controls.Docking.dll</HintPath>
+      <HintPath>$(TelerikDir)Binaries.NoXaml\WPF45\Telerik.Windows.Controls.Docking.dll</HintPath>
     </Reference>
     <Reference Include="Telerik.Windows.Controls.Navigation">
-      <HintPath>C:\Program Files (x86)\Progress\Telerik UI for WPF R1 2020\Binaries\WPF45\Telerik.Windows.Controls.Navigation.dll</HintPath>
+      <HintPath>$(TelerikDir)Binaries\WPF45\Telerik.Windows.Controls.Navigation.dll</HintPath>
     </Reference>
     <Reference Include="Telerik.Windows.Data">
-      <HintPath>C:\Program Files (x86)\Progress\Telerik UI for WPF R1 2020\Binaries\WPF45\Telerik.Windows.Data.dll</HintPath>
+      <HintPath>$(TelerikDir)Binaries\WPF45\Telerik.Windows.Data.dll</HintPath>
     </Reference>
     <Reference Include="Telerik.Windows.Documents">
-      <HintPath>C:\Program Files (x86)\Progress\Telerik UI for WPF R1 2020\Binaries.NoXaml\WPF45\Telerik.Windows.Documents.dll</HintPath>
+      <HintPath>$(TelerikDir)Binaries.NoXaml\WPF45\Telerik.Windows.Documents.dll</HintPath>
     </Reference>
     <Reference Include="Telerik.Windows.Themes.Summer">
-      <HintPath>C:\Program Files (x86)\Progress\Telerik UI for WPF R1 2020\Binaries.NoXaml\WPF45\Telerik.Windows.Themes.Summer.dll</HintPath>
+      <HintPath>$(TelerikDir)Binaries.NoXaml\WPF45\Telerik.Windows.Themes.Summer.dll</HintPath>
     </Reference>
     <Reference Include="WindowsBase" />
     <Reference Include="PresentationCore" />
@@ -130,7 +135,12 @@
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
-    <None Include="NLog.config" />
+    <Content Include="NLog.config">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="images\*.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <None Include="packages.config" />
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
@@ -147,13 +157,4 @@
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-  <PropertyGroup>
-    <PostBuildEvent>md $(SolutionDir)\wpfDiscover\bin\Debug\images
-md $(SolutionDir)\wpfDiscover\bin\Release\images
-
-copy $(SolutionDir)\wpfDiscover\images\* $(SolutionDir)\wpfDiscover\bin\Debug\images\*
-copy $(SolutionDir)\wpfDiscover\images\* $(SolutionDir)\wpfDiscover\bin\Release\images\*
-copy $(SolutionDir)\wpfDiscover\NLog.config $(SolutionDir)\wpfDiscover\bin\Debug\*
-copy $(SolutionDir)\wpfDiscover\NLog.config $(SolutionDir)\wpfDiscover\bin\Release\*</PostBuildEvent>
-  </PropertyGroup>
 </Project>

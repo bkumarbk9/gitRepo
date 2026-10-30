@@ -8,7 +8,7 @@ Consider printing using a standard printer. The moment a printer is configured i
 ![Application Image](https://github.com/bkumarbk9/BonjourInWPF/blob/main/doc/img/Screenshot.jpg?raw=true)
 ## Background
 
-onjour is Apple’s concept for zero-configuration networking over IP. Bonjour comes out of the work of the ZEROCONF Working Group, part of the Internet Engineering Task Force (IETF). The ZEROCONF Working Group’s requirements and proposed solutions for zero-configuration networking over IP essentially cover three areas:
+Bonjour is Apple’s concept for zero-configuration networking over IP. Bonjour comes out of the work of the ZEROCONF Working Group, part of the Internet Engineering Task Force (IETF). The ZEROCONF Working Group’s requirements and proposed solutions for zero-configuration networking over IP essentially cover three areas:
 
 addressing (allocating IP addresses to hosts)
 
@@ -27,7 +27,29 @@ In many ways, this kind of browsing is even more powerful for applications than 
 ## Using the Application
 1. Open Quick demo application
 2. Application detects all Bonjour compliant devices, services in your local network
-3. Check for error and using tabs in application 
+3. Select a device to see its details; the **Messages** tab shows errors and service announcements
+
+> The ready-to-run files in `DemoBinaries` were built before the V1.1 fixes below. Build from source for the latest version.
+
+## Building from source
+
+**Prerequisites**
+- Visual Studio 2022 or later with the **.NET desktop development** workload (.NET Framework 4.8)
+- **Telerik UI for WPF R1 2020**, installed in its default folder. For another location or version, set `TelerikDir`, for example `msbuild /p:TelerikDir="D:\Telerik\UI for WPF\"` or a `TelerikDir` environment variable.
+
+**Build and test**
+1. Open `src/wpfDiscover.sln`. NuGet packages are restored automatically (from the command line: `msbuild src/wpfDiscover.sln -t:restore -p:RestorePackagesConfig=true`).
+2. Build and run `wpfDiscover.View`.
+3. Run the unit tests in **Test Explorer**, or with `dotnet test src/wpfDiscoverModel.Tests`. They cover discovery bookkeeping, TTL expiry and thread safety without needing a network.
+
+**Project layout**
+
+| Project | Role |
+|---|---|
+| `wpfDiscover.View` | WPF window (Telerik controls) |
+| `wpfDiscover.ViewModel` | Bindable state and commands |
+| `wpfDiscoverModel` | mDNS discovery with Zeroconf, device list and TTL expiry |
+| `wpfDiscoverModel.Tests` | MSTest unit tests for the model |
 
 ## Why WPF Application
 
@@ -59,11 +81,11 @@ Copyright (C) 2024 Bharath K A (bkumarbk9)
 Licensed under the GNU Affero General Public License v3.0 only (`AGPL-3.0-only`).
 See [LICENSE](LICENSE) for the full license text.
 
-Third-party components (Telerik UI for WPF, NLog, Zeroconf, System.Reactive and the other libraries in `DemoBinaries` and `src/packages`) remain under their own licenses.
+Third-party components (Telerik UI for WPF, NLog, Zeroconf, System.Reactive and the other libraries in `DemoBinaries` and the restored NuGet packages) remain under their own licenses.
 
 ## History
  - V1.0 -- 5th May 2024 - First version
- - 
+ - V1.1 -- 29th October 2026 - Reliability fixes: no more 100% CPU after a device's TTL expires, thread-safe device list (no crash on "goodbye" messages), each network domain resolved once, IPv6 addresses shown in full, scan time in seconds, Messages pane capped at the latest 500 entries, discovery stopped cleanly on exit. Added unit tests; NuGet packages are restored instead of committed.
 ## References
 1. https://developer.apple.com/library/archive/documentation/Cocoa/Conceptual/NetServices/Articles/about.html
 2. https://github.com/novotnyllc/Zeroconf 
