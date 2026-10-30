@@ -9,6 +9,12 @@ Free demo projects that show how to use different technologies, from cloud AI se
 | [Cloud Spreadsheet](Projects/CloudSpreadsheet) | Real-time web, collaboration | C#, .NET 10, ASP.NET Core WebSockets, JavaScript, MSTest, Azure Container Apps | AGPL-3.0 |
 | [Bonjour in WPF](Projects/BonjourInWPF) | Desktop, networking | C#, WPF, .NET Framework 4.8, MVVM, Zeroconf, Telerik UI for WPF | AGPL-3.0 |
 
+**Prototypes**: earlier experiments, kept as originally published and not maintained. Some have grown into the projects above.
+
+| Prototype | Area | Tech stack | Year | License |
+|---|---|---|---|---|
+| [Cloud Spreadsheet (original)](LegacyProjects/prototypeProjects/CloudSpreadsheet) | Real-time web | HTML5, JavaScript, WebSockets, C# server, .NET Framework 4.5 | 2015 | AGPL-3.0 |
+
 ---
 
 ## Azure AI Document Reader
@@ -58,18 +64,10 @@ A Windows desktop tool that uses **mDNS (Bonjour/Zeroconf)** to discover the dev
 
 ---
 
-# Prototypes
-
-Earlier experiments and proofs of concept, kept as originally published. They show the idea but aren't maintained or production-ready; some have grown into full projects above.
-
-| Prototype | Area | Tech stack | Year | License |
-|---|---|---|---|---|
-| [Cloud Spreadsheet (original)](LegacyProjects/prototypeProjects/CloudSpreadsheet) | Real-time web | HTML5, JavaScript, WebSockets, C# server, .NET Framework 4.5 | 2015 | AGPL-3.0 |
-
-## Cloud Spreadsheet (original)
+## Cloud Spreadsheet (original) *(prototype)*
 📁 [`LegacyProjects/prototypeProjects/CloudSpreadsheet`](LegacyProjects/prototypeProjects/CloudSpreadsheet)
 
-A lightweight, real-time online spreadsheet that pushes cell updates to the browser over **WebSockets**, demonstrating low-latency messaging. It includes an HTML/JavaScript client, a hand-written C# WebSocket server and a C# spreadsheet service, plus the original CodeProject article (preserved as a PDF). Rewritten as the [Cloud Spreadsheet](Projects/CloudSpreadsheet) project above.
+A lightweight, real-time online spreadsheet that pushes cell updates to the browser over **WebSockets**, demonstrating low-latency messaging. It includes an HTML/JavaScript client, a hand-written C# WebSocket server and a C# spreadsheet service, plus the original CodeProject article (preserved as a PDF). Rewritten as the [Cloud Spreadsheet](Projects/CloudSpreadsheet) project.
 
 ---
 
