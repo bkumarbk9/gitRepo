@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/src/" />
+  <Folder Name="/src/backend/">
+    <Project Path="src/backend/StockTickerNasdaq.Market/StockTickerNasdaq.Market.csproj" />
+    <Project Path="src/backend/StockTickerNasdaq.Server/StockTickerNasdaq.Server.csproj" />
+    <Project Path="src/backend/StockTickerNasdaq.Universe/StockTickerNasdaq.Universe.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/StockTickerNasdaq.Market.Tests/StockTickerNasdaq.Market.Tests.csproj" />
+    <Project Path="tests/StockTickerNasdaq.Universe.Tests/StockTickerNasdaq.Universe.Tests.csproj" />
+  </Folder>
+</Solution>

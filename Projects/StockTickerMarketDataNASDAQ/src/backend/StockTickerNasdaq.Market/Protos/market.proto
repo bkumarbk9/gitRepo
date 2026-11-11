@@ -1,0 +1,74 @@
+// Copyright (C) 2026 Bharath K A (bkumarbk9)
+// SPDX-License-Identifier: AGPL-3.0-only
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License version 3
+// as published by the Free Software Foundation.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+// Wire format from the server to each browser. One binary Frame per broadcast tick.
+//
+// Ticker ids: each pick gets a new id for that connection, so the browser never confuses an old pick with a new one.
+// Values: fixed-point integers. A Column holds one field for many stocks; each delta is the change since the value this
+// browser last received for that stock and field, so small price moves take one or two bytes.
+syntax = "proto3";
+
+package market;
+
+option csharp_namespace = "StockTickerNasdaq.Market.Wire";
+
+enum Field {
+  FIELD_UNSPECIFIED = 0;
+  BID_PRICE = 1;
+  ASK_PRICE = 2;
+  LAST_PRICE = 3;
+  HIGH = 4;
+  LOW = 5;
+  OPEN = 6;
+  PREVIOUS_CLOSE = 7;
+  BID_SIZE = 8;
+  ASK_SIZE = 9;
+  LAST_SIZE = 10;
+  VOLUME = 11;
+  REALIZED_VOL_PERCENT = 12;
+  VAR95_PERCENT = 13;
+  BETA = 14;
+  SHARPE = 15;
+  MAX_DRAWDOWN_PERCENT = 16;
+  RISK_REGIME = 17;
+  BUY_PRESSURE_PERCENT = 18;
+  RELATIVE_VOLUME = 19;
+  SLIPPAGE_BPS_100K = 20;
+  VWAP = 21;
+  VWAP_DISTANCE_PERCENT = 22;
+  RSI14 = 23;
+  ATR14 = 24;
+  HIGH52 = 25;
+  LOW52 = 26;
+  POSITION52_PERCENT = 27;
+  TIER = 28;
+}
+
+message Frame {
+  uint32 seq = 1;
+  int64 time_ms = 2;
+  // Picks announced in this frame: the id and the ticker symbol for each.
+  repeated uint32 new_ticker_id = 3 [packed = true];
+  repeated string new_symbol = 4;
+  repeated Column columns = 5;
+}
+
+message Column {
+  Field field = 1;
+  // Number of decimal places the values are scaled by: 4 for prices and ratios, 0 for sizes and counts.
+  uint32 decimals = 2;
+  repeated uint32 ticker_id = 3 [packed = true];
+  repeated sint64 delta = 4 [packed = true];
+}

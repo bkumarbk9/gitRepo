@@ -1,0 +1,18 @@
+{
+  "/api": {
+    "target": "http://127.0.0.1:5090",
+    "secure": false,
+    "changeOrigin": true
+  },
+  "/proto": {
+    "target": "http://127.0.0.1:5090",
+    "secure": false,
+    "changeOrigin": true
+  },
+  "/ws": {
+    "target": "ws://127.0.0.1:5090",
+    "ws": true,
+    "secure": false,
+    "changeOrigin": true
+  }
+}

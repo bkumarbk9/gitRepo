@@ -1,0 +1,12 @@
+{
+  "profiles": {
+    "StockTickerNasdaq.Server": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "applicationUrl": "https://localhost:50090;http://localhost:50091"
+    }
+  }
+}
