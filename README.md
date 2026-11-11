@@ -8,6 +8,7 @@ Free demo projects that show how to use different technologies, from cloud AI se
 | [REST API Health Monitor](Projects/rest-api-health-monitor) | Web app, monitoring | TypeScript, Angular 22 (signals), Vitest, Azure Static Web Apps, GitHub Actions | AGPL-3.0 |
 | [Cloud Spreadsheet](Projects/CloudSpreadsheet) | Real-time web, collaboration | C#, .NET 10, ASP.NET Core WebSockets, JavaScript, MSTest, Azure Container Apps | AGPL-3.0 |
 | [Bonjour in WPF](Projects/BonjourInWPF) | Desktop, networking | C#, WPF, .NET Framework 4.8, MVVM, Zeroconf, Telerik UI for WPF | AGPL-3.0 |
+| [Cholesky Market Stream](Projects/cholesky-market-stream) | Quant simulation, binary data | C++20, CMake, Cholesky decomposition, 12-factor model, GoogleTest | AGPL-3.0 |
 
 **Prototypes**: earlier experiments, kept as originally published and not maintained. Some have grown into the projects above.
 
@@ -59,6 +60,11 @@ A real-time, collaborative spreadsheet in the browser, like a small Google Sheet
 📁 [`Projects/BonjourInWPF`](Projects/BonjourInWPF)
 
 A Windows desktop tool that uses **mDNS (Bonjour/Zeroconf)** to discover the devices and services on your local network, such as printers, with no configuration. It's built with **WPF** using the MVVM pattern (separate View, ViewModel and Model projects) and **Telerik UI for WPF** controls. Ready-to-run binaries are included in `DemoBinaries`. Building from source requires a Telerik UI for WPF installation.
+
+## Cholesky Market Stream
+📁 [`Projects/cholesky-market-stream`](Projects/cholesky-market-stream)
+
+A C++20 simulator of correlated daily stock prices for 8,000 stocks over 504 trading days. Correlation comes from a dense Cholesky decomposition for small baskets, and a 12-factor sector model (market plus eleven sectors, O(N·K)) at full scale. The result is a 15.5 MiB binary file, `MKTSIM01`, with a documented layout and readers in Node.js and C#, plus per-stock risk metrics (volatility, VaR, beta, Sharpe, drawdown, 52-week range and regime). Only the standard library is used for the maths; GoogleTest is the test dependency. Protobuf streaming and the Azure Web PubSub publisher are the next stages.
 
 ---
 
