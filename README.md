@@ -8,6 +8,7 @@ Free demo projects that show how to use different technologies, from cloud AI se
 | [REST API Health Monitor](Projects/rest-api-health-monitor) | Web app, monitoring | TypeScript, Angular 22 (signals), Vitest, Azure Static Web Apps, GitHub Actions | AGPL-3.0 |
 | [Cloud Spreadsheet](Projects/CloudSpreadsheet) | Real-time web, collaboration | C#, .NET 10, ASP.NET Core WebSockets, JavaScript, MSTest, Azure Container Apps | AGPL-3.0 |
 | [Bonjour in WPF](Projects/BonjourInWPF) | Desktop, networking | C#, WPF, .NET Framework 4.8, MVVM, Zeroconf, Telerik UI for WPF | AGPL-3.0 |
+| [SPSC Ring Buffer](Projects/SPSC_HFT_RingBuffer) | Low latency, shared memory | C++20, C# .NET 10, POSIX shared memory, mmap, Linux x86_64 | AGPL-3.0 |
 | [Cholesky Market Stream](Projects/cholesky-market-stream) | Quant simulation, binary data | C++20, CMake, Cholesky decomposition, 12-factor model, GoogleTest | AGPL-3.0 |
 
 **Prototypes**: earlier experiments, kept as originally published and not maintained. Some have grown into the projects above.
@@ -60,6 +61,11 @@ A real-time, collaborative spreadsheet in the browser, like a small Google Sheet
 📁 [`Projects/BonjourInWPF`](Projects/BonjourInWPF)
 
 A Windows desktop tool that uses **mDNS (Bonjour/Zeroconf)** to discover the devices and services on your local network, such as printers, with no configuration. It's built with **WPF** using the MVVM pattern (separate View, ViewModel and Model projects) and **Telerik UI for WPF** controls. Ready-to-run binaries are included in `DemoBinaries`. Building from source requires a Telerik UI for WPF installation.
+
+## SPSC Ring Buffer
+📁 [`Projects/SPSC_HFT_RingBuffer`](Projects/SPSC_HFT_RingBuffer)
+
+A header-only, lock-free single-producer / single-consumer ring buffer in **POSIX shared memory** (`shm_open` + `mmap`), written in **C++20** for Linux x86_64. Cache-line-isolated indices, shadow-cached remote indices, and acquire/release ordering with no fences on the hot path. It comes with a **C#/.NET 10** client that uses the same segment layout, so a C++ publisher and a C# subscriber (or the reverse) can exchange messages. Includes a small publish/subscribe CLI for each language and a test suite.
 
 ## Cholesky Market Stream
 📁 [`Projects/cholesky-market-stream`](Projects/cholesky-market-stream)
