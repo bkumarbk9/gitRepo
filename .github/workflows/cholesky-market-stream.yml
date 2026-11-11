@@ -1,0 +1,74 @@
+# Copyright (C) 2026 Bharath K A (bkumarbk9)
+# SPDX-License-Identifier: AGPL-3.0-only
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License version 3
+# as published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+# Builds the cholesky-market-stream simulator and runs its GoogleTest suite on Linux (GCC and Clang) and Windows (MSVC).
+# Runs only when this project or this workflow changes.
+name: cholesky-market-stream
+
+on:
+  push:
+    paths:
+      - 'Projects/cholesky-market-stream/**'
+      - '.github/workflows/cholesky-market-stream.yml'
+  pull_request:
+    paths:
+      - 'Projects/cholesky-market-stream/**'
+      - '.github/workflows/cholesky-market-stream.yml'
+
+jobs:
+  linux:
+    name: Linux ${{ matrix.compiler }}
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Projects/cholesky-market-stream
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - compiler: gcc
+            cc: gcc
+            cxx: g++
+          - compiler: clang
+            cc: clang
+            cxx: clang++
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Ninja
+        run: sudo apt-get update && sudo apt-get install -y ninja-build
+      - name: Configure
+        env:
+          CC: ${{ matrix.cc }}
+          CXX: ${{ matrix.cxx }}
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+      - name: Build
+        run: cmake --build build
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
+
+  windows:
+    name: Windows MSVC
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: Projects/cholesky-market-stream
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+      - name: Build
+        run: cmake --build build --config Release
+      - name: Test
+        run: ctest --test-dir build -C Release --output-on-failure

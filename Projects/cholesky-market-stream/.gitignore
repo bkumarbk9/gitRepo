@@ -1,0 +1,23 @@
+# Build output
+build/
+out/
+cmake-build-*/
+CMakeFiles/
+CMakeCache.txt
+*.obj
+*.exe
+*.lib
+*.pdb
+*.ilk
+
+# The full dataset is generated locally or in CI, so it stays out of Git history.
+data/market_history.bin
+data/*.tmp
+
+# Editors and OS files
+.vs/
+.vscode/
+.idea/
+*.user
+Thumbs.db
+.DS_Store
