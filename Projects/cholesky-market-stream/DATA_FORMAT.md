@@ -1,7 +1,7 @@
 # `market_history.bin` format
 
 Little-endian binary file with three parts, in this order. Every offset below follows from the header, so readers must
-take N and D from the header and not assume the default 8,000 x 504.
+take N and D from the header and not assume the default 7,080 x 504.
 
 | Part | Byte range | Size |
 |---|---|---|
@@ -9,18 +9,18 @@ take N and D from the header and not assume the default 8,000 x 504.
 | Symbol table | `32 .. 32 + 16N - 1` | 16 N bytes |
 | Price matrix | `32 + 16N .. end` | 4 N D bytes |
 
-Total size: `32 + 16N + 4ND` bytes. For the default dataset (N = 8,000, D = 504) that is **16,256,032 bytes**
-(15.5 MiB). The committed sample (N = 10, D = 504) is **20,352 bytes**.
+Total size: `32 + 16N + 4ND` bytes. For the default dataset (N = 7,080, D = 504) that is **14,386,592 bytes**
+(13.7 MiB). The committed sample (N = 10, D = 504) is **20,352 bytes**.
 
 > **Correction to the original spec:** the spec gave the price matrix offset as 131,104. The spec's own sizes give
-> `32 + 16 x 8,000 = 128,032`, so the matrix starts at byte **128,032**. The file size formula above is the reference.
+> `32 + 16 x 8,000 = 128,032` (the spec's own N). For the default file, N = 7,080, so the matrix starts at byte **113,312**. The file size formula above is the reference.
 
 ## Header (bytes 0..31)
 
 | Offset | Size | Type | Field | Value in the default file |
 |---|---|---|---|---|
 | 0 | 8 | ASCII | `magic` | `MKTSIM01` |
-| 8 | 4 | `uint32` | `num_stocks` (N) | 8000 |
+| 8 | 4 | `uint32` | `num_stocks` (N) | 7080 |
 | 12 | 4 | `uint32` | `num_days` (D) | 504 |
 | 16 | 8 | `int64` | `start_epoch_sec` | 1704067200 (2024-01-01 00:00 UTC, the date of day 0) |
 | 24 | 8 | `uint64` | `seed` | 20260101 |
@@ -31,7 +31,7 @@ simply the `t`-th simulated trading day.
 ## Symbol table (bytes 32 .. 32 + 16N - 1)
 
 Stock `i` occupies bytes `32 + 16i .. 32 + 16i + 15`. Each field is ASCII, null-terminated, and padded with zeros to 16
-bytes. Symbols are at most 15 characters. The default symbols are synthetic four-letter codes; with `--symbols` they
+bytes. Symbols are at most 15 characters. The default symbols are the 7,080 NASDAQ common stocks in `data/nasdaq_symbols.txt`; with `--synthetic` they are
 are the lines of your file, so the Stock Ticker project's real tickers can be used.
 
 ## Price matrix (bytes 32 + 16N .. end)
@@ -81,8 +81,8 @@ ReadOnlySpan<float> stockRow = prices.Slice(i * (int)d, (int)d);   // stock i
 
 ### Python (`numpy.memmap`)
 
-Tested with Python 3.14 and numpy 2.5 on the default file. For the default size (N = 8,000) the matrix offset is
-`32 + 16 * 8000 = 128032`, which is the value used in the example below.
+Tested with Python 3.14 and numpy 2.5 on the default file. For the default size (N = 7,080) the matrix offset is
+`32 + 16 * 7080 = 113312`, which is the value used in the example below.
 
 ```python
 import numpy as np
@@ -93,7 +93,7 @@ with open(path, "rb") as f:
     symbols = np.frombuffer(f.read(32 + 16 * int(N)), dtype="S16", offset=32, count=int(N))
 prices = np.memmap(path, dtype="<f4", mode="r", offset=32 + 16 * int(N), shape=(int(N), int(D)))
 
-print(symbols[0].decode().rstrip("\x00"), prices[0, :3])   # AAAA [23.879826 24.064592 24.515865]
+print(symbols[0].decode().rstrip("\x00"), prices[0, :3])   # AACG [23.879826 24.064592 24.515865]
 ```
 
 `prices[i]` is stock `i`, a zero-copy view.

@@ -40,11 +40,13 @@ using Clock = std::chrono::steady_clock;
 struct Options {
     bool generate_only = false;
     bool help = false;
+    bool synthetic = false;
     std::uint64_t seed = mkt::kDefaultSeed;
     std::size_t stocks = mkt::kDefaultStocks;
+    bool stocks_given = false;
     std::size_t days = mkt::kDefaultDays;
     std::string out = "data/market_history.bin";
-    std::string symbols_file;
+    std::string symbols_file = "data/nasdaq_symbols.txt";
     mkt::Mode mode = mkt::Mode::Auto;
 };
 
@@ -53,9 +55,11 @@ void print_usage() {
                  "  --generate-only        write the history file and exit\n"
                  "  --seed <uint64>        master seed (default " << mkt::kDefaultSeed << ")\n"
                  "  --out <path>           history file (default data/market_history.bin)\n"
-                 "  --stocks <N>           number of stocks (default " << mkt::kDefaultStocks << ")\n"
+                 "  --symbols <file>       one ticker per line (default data/nasdaq_symbols.txt, the real NASDAQ\n"
+                 "                         universe); sets N to the line count\n"
+                 "  --synthetic            use generated four-letter codes instead of a symbol file\n"
+                 "  --stocks <N>           number of synthetic stocks, with --synthetic only (default " << mkt::kDefaultStocks << ")\n"
                  "  --days <D>             trading days (default " << mkt::kDefaultDays << ")\n"
-                 "  --symbols <file>       one ticker per line; sets N to the line count\n"
                  "  --mode <auto|dense|factor>  correlation engine (auto: dense up to "
               << mkt::kDenseModeMaxStocks << " stocks)\n"
                  "  --help                 show this text\n";
@@ -90,12 +94,16 @@ Options parse_args(int argc, char** argv) {
             o.seed = parse_u64("--seed", next("--seed"));
         } else if (arg == "--out") {
             o.out = next("--out");
+        } else if (arg == "--synthetic") {
+            o.synthetic = true;
         } else if (arg == "--stocks") {
             o.stocks = parse_u64("--stocks", next("--stocks"));
+            o.stocks_given = true;
         } else if (arg == "--days") {
             o.days = parse_u64("--days", next("--days"));
         } else if (arg == "--symbols") {
             o.symbols_file = next("--symbols");
+            if (o.synthetic) throw std::invalid_argument("--symbols and --synthetic cannot be combined");
         } else if (arg == "--mode") {
             const std::string mode = next("--mode");
             if (mode == "auto") o.mode = mkt::Mode::Auto;
@@ -116,9 +124,9 @@ double ms_since(Clock::time_point start) {
 // Generates the history in memory and reports how long each part took.
 mkt::MarketHistory generate(const Options& o) {
     mkt::MarketHistory h;
-    std::vector<std::string> symbols = o.symbols_file.empty()
-                                           ? mkt::synthetic_symbols(o.stocks)
-                                           : mkt::read_symbol_file(o.symbols_file);
+    if (o.stocks_given && !o.synthetic) throw std::invalid_argument("--stocks needs --synthetic; the symbol file sets the count");
+    std::vector<std::string> symbols = o.synthetic ? mkt::synthetic_symbols(o.stocks)
+                                                   : mkt::read_symbol_file(o.symbols_file);
     h.num_stocks = static_cast<std::uint32_t>(symbols.size());
     h.num_days = static_cast<std::uint32_t>(o.days);
     h.start_epoch_sec = mkt::kDefaultStartEpochSec;

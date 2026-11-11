@@ -51,7 +51,7 @@ target_link_libraries(cholesky_market_stream PRIVATE mkt_core)
 add_custom_target(market_history
     COMMAND cholesky_market_stream --generate-only --out ${CMAKE_SOURCE_DIR}/data/market_history.bin
     DEPENDS cholesky_market_stream
-    COMMENT "Generating data/market_history.bin (about 15.5 MiB)"
+    COMMENT "Generating data/market_history.bin (about 14 MB)"
     VERBATIM)
 
 if(MKT_BUILD_TESTS)

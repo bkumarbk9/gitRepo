@@ -1,6 +1,6 @@
 # cholesky-market-stream
 
-A C++20 simulator of correlated daily stock prices. It generates a 504-day history for 8,000 stocks, exports it as a
+A C++20 simulator of correlated daily stock prices. It generates a 504-day history for the 7,080 common stocks of the NASDAQ universe, exports it as a
 self-contained binary file for reuse in other projects, and computes per-stock risk metrics.
 
 **Scope.** This repository is the data product: a simulator, the `MKTSIM01` binary dataset, readers for C++, Node.js,
@@ -24,10 +24,20 @@ build\mkt_tests.exe
 
 Turn the tests off with `-DMKT_BUILD_TESTS=OFF` for a faster build.
 
+## Symbol list
+
+`data/nasdaq_symbols.txt` holds the 7,080 common stocks of the NASDAQ universe, one ticker per line. It was built from
+NASDAQ Trader's `nasdaqlisted.txt` and `otherlisted.txt` on 2026-11-11. Rows were kept when the ticker matches
+`^[A-Z][A-Z0-9.-]{0,9}$`, the ETF flag is `N`, and the test-issue flag is `N`; duplicates were dropped, and NASDAQ listings
+come first. The count matches the NASDAQ Stock Ticker project's universe. The original spec said 8,000 synthetic stocks;
+the real universe is 7,080, so the file size changed accordingly.
+
+To use a different universe, pass your own list with `--symbols`. Use `--synthetic --stocks N` to get generated codes.
+
 ## Command line
 
 ```bat
-:: Generate the full dataset (8,000 stocks, 504 days, seed 20260101) into data/market_history.bin
+:: Generate the full dataset (7,080 NASDAQ stocks, 504 days, seed 20260101) into data/market_history.bin
 build\cholesky_market_stream.exe --generate-only
 
 :: The same through CMake
@@ -48,12 +58,13 @@ build\cholesky_market_stream.exe
 | `--generate-only` | off | Write the file and exit. |
 | `--seed <uint64>` | 20260101 | Master seed. The same seed and settings give the same bytes on the same build. |
 | `--out <path>` | `data/market_history.bin` | Output or input file. |
-| `--stocks <N>` | 8000 | Number of stocks. `--symbols` overrides it. |
+| `--stocks <N>` | 8000 | Synthetic stock count, used only with `--synthetic`. |
 | `--days <D>` | 504 | Trading days. |
-| `--symbols <file>` | synthetic | One ticker per line. |
+| `--symbols <file>` | `data/nasdaq_symbols.txt` | One ticker per line; sets the stock count. |
+| `--synthetic` | off | Use generated four-letter codes instead of the symbol file. |
 | `--mode <auto\|dense\|factor>` | auto | Auto uses the dense Cholesky model up to 500 stocks, and the 12-factor model above that. |
 
-`data/market_history.bin` is listed in `.gitignore`. It is 16,256,032 bytes (15.5 MiB). Regenerate it with the command
+`data/market_history.bin` is listed in `.gitignore`. It is 14,386,592 bytes (13.7 MiB). Regenerate it with the command
 above; the output is the same on the same build. The layout is in [DATA_FORMAT.md](DATA_FORMAT.md).
 
 ## Benchmarks
@@ -63,11 +74,11 @@ rough.
 
 | Step | Time |
 |---|---|
-| Generate 4.03 million correlated prices (8,000 x 504, 12-factor model) | about 365 ms |
+| Generate 3.57 million correlated prices (7,080 x 504, 12-factor model) | about 315 ms |
 | Generate 151,200 prices (300 stocks, dense Cholesky model) | about 48 ms |
-| Write `market_history.bin` (16.26 MB) | about 30 ms |
-| Load `market_history.bin` into memory | about 47 ms |
-| Compute risk for 8,000 stocks in one pass | about 440 ms |
+| Write `market_history.bin` (14.39 MB) | about 25 ms |
+| Load `market_history.bin` into memory | about 39 ms |
+| Compute risk for 7,080 stocks in one pass | about 390 ms |
 
 The risk figure is well above the "about 14 ms" example in the original specification. The engine makes one pass over
 the matrix, with a sort per stock for the historical VaR and two logarithm passes. Caching the log returns would cut the
