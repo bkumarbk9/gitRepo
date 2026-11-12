@@ -56,14 +56,16 @@ public sealed class ServerOptions
         return path;
     }
 
-    public static ServerOptions FromEnvironment()
+    // The cache folder comes from Server:UniverseCacheDirectory in the profile file when it is set. The environment
+    // variable is used only when the file does not set it.
+    public static ServerOptions FromEnvironment(string? universeCacheDirectory = null)
     {
         return new ServerOptions
         {
             UniverseSources = Text("UNIVERSE_SOURCES") is { } list
                 ? list.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
                 : StockTickerNasdaq.Universe.NasdaqUniverse.DefaultSources,
-            UniverseCacheDirectory = Text("UNIVERSE_CACHE_DIR") ?? Path.Combine(Directory.GetCurrentDirectory(), "universe-cache"),
+            UniverseCacheDirectory = universeCacheDirectory ?? Text("UNIVERSE_CACHE_DIR") ?? Path.Combine(Directory.GetCurrentDirectory(), "universe-cache"),
             RealSecondsPerSimulatedMinute = Positive("SIM_REAL_SECONDS_PER_MINUTE", 5),
             SimulatorSeed = Text("SIM_SEED") is { } seed && int.TryParse(seed, NumberStyles.Integer, CultureInfo.InvariantCulture, out int value)
                 ? value

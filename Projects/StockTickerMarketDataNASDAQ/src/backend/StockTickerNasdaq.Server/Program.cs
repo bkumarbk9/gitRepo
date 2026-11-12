@@ -22,11 +22,12 @@ using System.Text.Json;
 using StockTickerNasdaq.Market;
 using StockTickerNasdaq.Server;
 
-ServerOptions options = ServerOptions.FromEnvironment();
 var builder = WebApplication.CreateBuilder(args);
 // The deployment profile is chosen in appsettings.json (Deployment:Profile). Its file is layered on top of it.
 string profile = builder.Configuration["Deployment:Profile"] ?? "local";
 builder.Configuration.AddJsonFile($"appsettings.{profile}.json", optional: false, reloadOnChange: true);
+// Read after the profile file, so the cache folder can be set in config (the container's app folder is read-only).
+ServerOptions options = ServerOptions.FromEnvironment(builder.Configuration["Server:UniverseCacheDirectory"]);
 DeploymentOptions deployment = builder.Configuration.GetSection("Deployment").Get<DeploymentOptions>() ?? new DeploymentOptions();
 deployment.Validate();
 // Loaded before the host starts, so a missing or damaged history file stops the server with a clear message.
