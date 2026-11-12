@@ -206,7 +206,8 @@ public sealed class Broadcaster
     private readonly DeploymentOptions _deployment;
     private readonly WebPubSubPublisher? _publisher;
     private readonly SharedStream _shared;
-    private long _lastSnapshotMs = long.MinValue;
+    // Starts at 0, so the first keyframe goes out at once. (long.MinValue here overflowed the elapsed-time check, so no keyframe was ever sent.)
+    private long _lastSnapshotMs = 0;
     // A browser that reconnects gets its values from the next snapshot, so this is how long it can wait.
     private static readonly long SnapshotEveryMs = 5_000;
 
