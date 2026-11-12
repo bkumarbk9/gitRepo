@@ -151,7 +151,8 @@ const PRICE_H = 220;
     .badge { display: inline-block; background: #fff3d6; color: #7a4b00; border-radius: 4px; padding: 0.1rem 0.45rem; font-size: 0.78rem; }
     .pill { display: inline-block; background: #e6f4e6; color: #1d5e1d; border-radius: 999px; padding: 0.1rem 0.6rem; font-size: 0.78rem; margin-left: 0.3rem; }
     header > div { min-width: 0; flex: 1 1 12rem; }
-    .close { flex: none; min-height: 2.4rem; min-width: 4rem; }
+    /* Pushed below the fixed live badge in the top-right corner. */
+    .close { flex: none; min-height: 2.4rem; min-width: 4rem; margin-top: 2.2rem; }
     .note, .snapshot, .legend, .muted { color: #555; font-size: 0.85rem; }
     .error { color: #a40000; }
     .chart { width: 100%; height: auto; background: #fbfbfb; border: 1px solid #eee; border-radius: 6px; }
