@@ -54,6 +54,8 @@ interface WireFrame {
 @Injectable({ providedIn: 'root' })
 export class MarketService {
   readonly connected = signal(false);
+  // True once the feed has connected at least once. Until then the page shows "Loading".
+  readonly everConnected = signal(false);
   readonly picks = signal<readonly string[]>([]);
   readonly view = signal<readonly string[]>([]);
   readonly quotes = signal<ReadonlyMap<string, QuoteRow>>(new Map());
@@ -163,6 +165,7 @@ export class MarketService {
 
     socket.onopen = () => {
       this.connected.set(true);
+      this.everConnected.set(true);
       this.retryMs = MIN_RETRY_MS;
       this.symbolById = new Map();
       this.baseById = new Map();
@@ -206,6 +209,7 @@ export class MarketService {
 
       client.on('connected', () => {
         this.connected.set(true);
+        this.everConnected.set(true);
         this.retryMs = MIN_RETRY_MS;
         this.symbolById = new Map();
         this.baseById = new Map();

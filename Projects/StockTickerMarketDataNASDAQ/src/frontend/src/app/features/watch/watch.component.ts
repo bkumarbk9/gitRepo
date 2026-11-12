@@ -115,7 +115,9 @@ const AUDIT_LABEL_BY_CODE: Readonly<Record<string, string>> = {
     .ticker { font-family: monospace; font-weight: 600; }
     .tier { margin-left: 0.5rem; font-size: 0.8rem; color: #555; }
 
-    .scroll { overflow-x: auto; }
+    /* The table scrolls inside its own box, so its horizontal scrollbar stays on screen and the header row stays visible. */
+    .scroll { overflow: auto; max-height: calc(100vh - 10rem); }
+    thead th { position: sticky; top: 0; z-index: 1; }
     table { border-collapse: collapse; white-space: nowrap; font-size: 0.9rem; }
     th, td { padding: 0.3rem 0.5rem; border-bottom: 1px solid #e3e3e3; }
     th { background: #f5f5f5; text-align: left; }
