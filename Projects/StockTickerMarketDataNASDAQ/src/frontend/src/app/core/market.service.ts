@@ -227,7 +227,11 @@ export class MarketService {
         this.retryMs = MIN_RETRY_MS;
         this.symbolById = new Map();
         this.baseById = new Map();
-        client.joinGroup(environment.group).catch(() => this.stopCloud());
+        // Only the client that is still current may stop the shared state. A late failure from an old client must not
+        // clear "live" while the direct socket is delivering prices.
+        client.joinGroup(environment.group).catch(() => {
+          if (client === this.cloud) this.stopCloud();
+        });
         void this.sendPicks();
       });
       client.on('group-message', (event) => {
@@ -276,7 +280,8 @@ export class MarketService {
   private stopCloud(): void {
     const client = this.cloud;
     this.cloud = null;
-    this.connected.set(false);
+    // Only a live cloud client changes the flag. Stopping nothing must not clear "live" set by the direct socket.
+    if (client !== null) this.connected.set(false);
     client?.stop();
   }
 
