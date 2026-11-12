@@ -320,16 +320,18 @@ public sealed class Broadcaster
         await BroadcastPerSessionAsync(nowMs);
     }
 
-    // Web PubSub: one frame to the group. Every SnapshotEveryMs a snapshot and the config go too, so a browser that
-    // joins late catches up within that time. A failed publish is logged and the next tick tries again.
+    // Cloud: one frame per tick, sent to the Web PubSub group and to any browser connected directly on /ws. The direct
+    // path is the fallback when the Web PubSub quota is used up. Every SnapshotEveryMs a snapshot and the config go to
+    // the group too, so a browser that joins late catches up. A failed publish is logged and the next tick tries again.
     private async Task BroadcastToGroupAsync(WebPubSubPublisher publisher, long nowMs)
     {
+        byte[]? frame = null;
         try
         {
             // Closes sessions whose time is up before this frame goes out. Their picks drop out of the demand below.
             await publisher.SweepAsync();
             _shared.SetTickers(DemandedTickers());
-            byte[]? frame = _shared.BuildBroadcast(nowMs);
+            frame = _shared.BuildBroadcast(nowMs);
             if (frame is not null) await publisher.SendFrameAsync(WebPubSubPublisher.Delta, frame);
 
             if (nowMs - _lastSnapshotMs >= SnapshotEveryMs)
@@ -343,6 +345,36 @@ public sealed class Broadcaster
         {
             Console.WriteLine($"Web PubSub publish failed: {ex.Message}");
         }
+
+        // The direct browsers get the same frame, whether or not the group publish worked.
+        await DeliverToClientsAsync(frame, nowMs);
+    }
+
+    // Sends the frame to each direct (/ws) browser. A browser that has just joined gets a snapshot instead.
+    private async Task DeliverToClientsAsync(byte[]? frame, long nowMs)
+    {
+        byte[]? snapshot = null;
+        foreach (ClientSession client in Clients)
+        {
+            try
+            {
+                if (client.NeedsSnapshot)
+                {
+                    snapshot ??= _shared.BuildSnapshot(nowMs);
+                    client.NeedsSnapshot = false;
+                    await client.SendAsync(snapshot);
+                }
+                else if (frame is not null)
+                {
+                    await client.SendAsync(frame);
+                }
+            }
+            catch (Exception)
+            {
+                Unregister(client);
+            }
+        }
+        RemoveSilent();
     }
 
     // Shared mode: one frame for everyone. A browser that has just joined gets a snapshot instead of the frame.

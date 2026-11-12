@@ -34,7 +34,7 @@ import { ViewportService } from './core/viewport.service';
     <!-- Fixed in the top-left corner, so it stays in view while a table scrolls. -->
     <div class="live-badge" role="status" [class.off]="!market.connected() && market.everConnected()" [class.loading]="!market.everConnected()">
       @if (market.connected()) {
-        <span class="dot" aria-hidden="true"></span> live
+        <span class="dot" aria-hidden="true"></span> {{ liveText() }}
       } @else if (market.everConnected()) {
         Refresh to start
       } @else {
@@ -92,7 +92,7 @@ import { ViewportService } from './core/viewport.service';
     :host { display: flex; flex-direction: column; min-height: 100vh; font-family: system-ui, sans-serif; color: #1c1c1c; }
     .live-badge { position: fixed; top: 0.5rem; right: 0.6rem; z-index: 30; display: flex; align-items: center; gap: 0.4rem;
                   padding: 0.2rem 0.7rem; border-radius: 999px; background: #fff; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
-                  font-weight: 700; font-size: 0.9rem; color: #1a7f37; }
+                  font-weight: 400; font-size: 0.9rem; color: #1a7f37; }
     .live-badge.off { color: #c62828; }
     .dot { width: 0.6rem; height: 0.6rem; border-radius: 50%; background: #1a7f37; animation: blink 2.4s ease-in-out infinite; }
     @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.2; } }
@@ -125,6 +125,18 @@ import { ViewportService } from './core/viewport.service';
 })
 export class App implements OnInit {
   protected readonly market = inject(MarketService);
+
+  // The live badge text, naming the feed in use.
+  protected liveText(): string {
+    switch (this.market.feed()) {
+      case 'local':
+        return 'live (local)';
+      case 'web-pubsub':
+        return 'live (Azure Web PubSub)';
+      case 'container-apps':
+        return 'live (Azure Container Apps)';
+    }
+  }
   protected readonly viewport = inject(ViewportService);
   private readonly api = inject(UniverseApi);
 

@@ -51,6 +51,9 @@ interface WireFrame {
   columns: WireColumn[];
 }
 
+// local: this server's websocket. web-pubsub: Azure Web PubSub. container-apps: the server's /ws (the fallback).
+export type FeedKind = 'local' | 'web-pubsub' | 'container-apps';
+
 @Injectable({ providedIn: 'root' })
 export class MarketService {
   readonly connected = signal(false);
@@ -65,6 +68,13 @@ export class MarketService {
 
   private socket: WebSocket | null = null;
   private cloud: WebPubSubClient | null = null;
+  // Set when Web PubSub refuses the feed (for example, the free daily message limit). The page then reads the same
+  // frames straight from the server's /ws endpoint for the rest of the visit.
+  private directMode = false;
+  // True once a frame has arrived. A disconnect before that means the feed never started.
+  private framesSeen = false;
+  // Which feed is in use, shown in the live badge.
+  readonly feed = signal<FeedKind>(environment.transport === 'local' ? 'local' : 'web-pubsub');
   private sessionId: string | null = null;
   private frameType: protobuf.Type | null = null;
   private pingTimer: ReturnType<typeof setInterval> | null = null;
@@ -126,7 +136,7 @@ export class MarketService {
 
   // Every change sends the whole state, so the server always has both lists.
   private sendState(): void {
-    if (environment.transport === 'web-pubsub') {
+    if (environment.transport === 'web-pubsub' && !this.directMode) {
       void this.sendPicks();
       return;
     }
@@ -154,12 +164,15 @@ export class MarketService {
 
   private open(): void {
     if (this.paused || this.endOfDay()) return;
-    if (environment.transport === 'web-pubsub') {
+    if (environment.transport === 'web-pubsub' && !this.directMode) {
       void this.openCloud();
       return;
     }
-    const scheme = location.protocol === 'https:' ? 'wss' : 'ws';
-    const socket = new WebSocket(`${scheme}://${location.host}/ws`);
+    // The server's /ws endpoint: on the local dev proxy this is the same site; in the cloud it is the Container App.
+    this.feed.set(environment.transport === 'local' ? 'local' : 'container-apps');
+    const server = environment.apiBase ? new URL(environment.apiBase) : location;
+    const scheme = server.protocol === 'https:' ? 'wss' : 'ws';
+    const socket = new WebSocket(`${scheme}://${server.host}/ws`);
     socket.binaryType = 'arraybuffer';
     this.socket = socket;
 
@@ -196,6 +209,7 @@ export class MarketService {
 
   // Cloud: opens a session, then joins the group. A failed negotiate is retried, as the socket is.
   private async openCloud(): Promise<void> {
+    this.feed.set('web-pubsub');
     try {
       const response = await fetch(`${environment.apiBase}/api/negotiate`);
       if (!response.ok) throw new Error(`negotiate failed: ${response.status}`);
@@ -233,7 +247,7 @@ export class MarketService {
       });
       client.on('disconnected', (event) => {
         console.warn('Cloud connection closed:', event.message ?? '(no reason)');
-        this.onCloudClosed(client);
+        this.onCloudClosed(client, JSON.stringify(event));
       });
 
       await client.start();
@@ -245,10 +259,16 @@ export class MarketService {
 
   // The server closed the session (its time is up) or the network dropped. Either way, a refresh starts a new session.
   // The page does not reconnect by itself, because a new session would restart the session limit.
-  private onCloudClosed(client: WebPubSubClient): void {
+  private onCloudClosed(client: WebPubSubClient, detail: string): void {
     if (client !== this.cloud) return;
     this.cloud = null;
     this.connected.set(false);
+    // Web PubSub refused the feed (its message limit), or it never delivered a frame: use the server's /ws instead.
+    if (!this.paused && (!this.framesSeen || detail.includes('limit'))) {
+      this.directMode = true;
+      this.open();
+      return;
+    }
     this.endOfDay.set(true);
   }
 
@@ -351,6 +371,7 @@ export class MarketService {
 
   private applyFrame(bytes: Uint8Array): void {
     if (this.frameType === null) return;
+    this.framesSeen = true;
     const decoded = this.frameType.decode(bytes);
     const frame = this.frameType.toObject(decoded, {
       longs: Number,
