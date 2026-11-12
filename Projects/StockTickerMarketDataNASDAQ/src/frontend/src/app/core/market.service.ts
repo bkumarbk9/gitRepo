@@ -214,11 +214,17 @@ export class MarketService {
       });
       client.on('group-message', (event) => {
         const message = event.message;
-        if (message.dataType === 'binary' && message.data instanceof ArrayBuffer) {
-          this.applyEnvelope(new Uint8Array(message.data));
-        } else if (message.dataType === 'text' && typeof message.data === 'string') {
+        if (typeof message.data === 'string') {
           this.handleControl(message.data);
+          return;
         }
+        void this.binaryBytes(message.data).then((bytes) => {
+          if (bytes === null) {
+            console.warn('Unexpected group message', message.dataType, Object.prototype.toString.call(message.data));
+          } else {
+            this.applyEnvelope(bytes);
+          }
+        });
       });
       client.on('disconnected', () => this.onCloudClosed(client));
 
@@ -308,6 +314,14 @@ export class MarketService {
     if (this.socket?.readyState === WebSocket.OPEN) {
       this.socket.send(JSON.stringify(payload));
     }
+  }
+
+  // The bytes of a binary group message. The client library may give an ArrayBuffer, a typed array or a Blob.
+  private async binaryBytes(data: unknown): Promise<Uint8Array | null> {
+    if (data instanceof ArrayBuffer) return new Uint8Array(data);
+    if (ArrayBuffer.isView(data)) return new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
+    if (data instanceof Blob) return new Uint8Array(await data.arrayBuffer());
+    return null;
   }
 
   // A cloud group message: one kind byte, then the protobuf frame. A snapshot resets the baseline, so a browser that
