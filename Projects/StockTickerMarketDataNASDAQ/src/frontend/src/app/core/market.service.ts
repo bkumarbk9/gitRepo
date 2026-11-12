@@ -214,7 +214,8 @@ export class MarketService {
       });
       client.on('group-message', (event) => {
         const message = event.message;
-        if (typeof message.data === 'string') {
+        // Text messages are control messages (JSON). Binary messages arrive as base64 text in the JSON protocol.
+        if (message.dataType === 'text' && typeof message.data === 'string') {
           this.handleControl(message.data);
           return;
         }
@@ -247,9 +248,11 @@ export class MarketService {
     this.endOfDay.set(true);
   }
 
+  // Stops the cloud connection on purpose (pause, end of day). The live flag goes off with it.
   private stopCloud(): void {
     const client = this.cloud;
     this.cloud = null;
+    this.connected.set(false);
     client?.stop();
   }
 
@@ -320,8 +323,10 @@ export class MarketService {
     }
   }
 
-  // The bytes of a binary group message. The client library may give an ArrayBuffer, a typed array or a Blob.
+  // The bytes of a binary group message. Over the JSON protocol the data is base64 text; the client library may also
+  // give an ArrayBuffer, a typed array or a Blob.
   private async binaryBytes(data: unknown): Promise<Uint8Array | null> {
+    if (typeof data === 'string') return Uint8Array.from(atob(data), (c) => c.charCodeAt(0));
     if (data instanceof ArrayBuffer) return new Uint8Array(data);
     if (ArrayBuffer.isView(data)) return new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
     if (data instanceof Blob) return new Uint8Array(await data.arrayBuffer());

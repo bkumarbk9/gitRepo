@@ -207,7 +207,8 @@ public sealed class Broadcaster
     private readonly WebPubSubPublisher? _publisher;
     private readonly SharedStream _shared;
     private long _lastSnapshotMs = long.MinValue;
-    private static readonly long SnapshotEveryMs = 30_000;
+    // A browser that reconnects gets its values from the next snapshot, so this is how long it can wait.
+    private static readonly long SnapshotEveryMs = 5_000;
 
     public Broadcaster(QuoteBook book, FeedOptions feed, DeploymentOptions deployment, WebPubSubPublisher? publisher = null)
     {
