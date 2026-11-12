@@ -86,7 +86,10 @@ export class MarketService {
     this.started = true;
     document.addEventListener("visibilitychange", () => this.onVisibilityChange());
     this.picks.set(this.loadPicks());
-    const root = await protobuf.load(`${environment.apiBase}/proto/market.proto`);
+    // Fetched here, not with protobuf.load: protobufjs resolves a full https:// address as a relative path in the browser.
+    const response = await fetch(`${environment.apiBase}/proto/market.proto`);
+    if (!response.ok) throw new Error(`market.proto: ${response.status}`);
+    const { root } = protobuf.parse(await response.text());
     this.frameType = root.lookupType('market.Frame');
     this.open();
   }
