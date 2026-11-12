@@ -332,6 +332,20 @@ public sealed class Broadcaster
             await publisher.SweepAsync();
             _shared.SetTickers(DemandedTickers());
             frame = _shared.BuildBroadcast(nowMs);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Frame build failed: {ex.Message}");
+        }
+
+        // Direct browsers first, so a slow or refused publish can never hold them up.
+        await DeliverToClientsAsync(frame, nowMs);
+
+        // Group publishing gives up after GroupPublishAttempts failures in a row (for example, the Web PubSub message
+        // limit). It starts again only when a browser asks for a new session (a refresh): see ResumeGroupPublish.
+        if (_groupPaused) return;
+        try
+        {
             if (frame is not null) await publisher.SendFrameAsync(WebPubSubPublisher.Delta, frame);
 
             if (nowMs - _lastSnapshotMs >= SnapshotEveryMs)
@@ -340,15 +354,33 @@ public sealed class Broadcaster
                 await publisher.SendControlAsync("{\"control\":\"config\",\"pauseWhenHidden\":" + (_feed.PauseWhenHidden ? "true" : "false") + "}");
                 await publisher.SendFrameAsync(WebPubSubPublisher.Snapshot, _shared.BuildSnapshot(nowMs));
             }
+            _groupFailures = 0;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Web PubSub publish failed: {ex.Message}");
+            _groupFailures++;
+            if (_groupFailures >= GroupPublishAttempts)
+            {
+                _groupPaused = true;
+                Console.WriteLine($"Web PubSub publish failed {GroupPublishAttempts} times in a row; group publishing stopped until a browser refreshes: {ex.Message}");
+            }
+            else
+            {
+                Console.WriteLine($"Web PubSub publish failed ({_groupFailures} of {GroupPublishAttempts}): {ex.Message}");
+            }
         }
-
-        // The direct browsers get the same frame, whether or not the group publish worked.
-        await DeliverToClientsAsync(frame, nowMs);
     }
+
+    // Called when a browser asks for a new session (a refresh), so group publishing gets its attempts back.
+    public void ResumeGroupPublish()
+    {
+        _groupFailures = 0;
+        _groupPaused = false;
+    }
+
+    private const int GroupPublishAttempts = 3;
+    private int _groupFailures;
+    private bool _groupPaused;
 
     // Sends the frame to each direct (/ws) browser. A browser that has just joined gets a snapshot instead.
     private async Task DeliverToClientsAsync(byte[]? frame, long nowMs)

@@ -92,9 +92,11 @@ app.MapGet("/api/status", (FeedStatus status, Broadcaster broadcaster, UniverseC
 
 // Web PubSub transport: opens a session and returns the URL that lets the browser join the market group. The session
 // ends after Feed:SessionMinutes (read now, so a change applies to browsers that connect after it). Local: not found.
-app.MapGet("/api/negotiate", ([Microsoft.AspNetCore.Mvc.FromServices] WebPubSubPublisher? publisher, IOptionsMonitor<FeedOptions> feedMonitor) =>
+app.MapGet("/api/negotiate", ([Microsoft.AspNetCore.Mvc.FromServices] WebPubSubPublisher? publisher, IOptionsMonitor<FeedOptions> feedMonitor, Broadcaster broadcaster) =>
 {
     if (publisher is null) return Results.NotFound();
+    // A browser asked for a new session (a refresh): group publishing may try again.
+    broadcaster.ResumeGroupPublish();
     string sessionId = publisher.OpenSession((int)Math.Round(feedMonitor.CurrentValue.SessionMinutes));
     return Results.Ok(new { url = publisher.ClientUrl(sessionId).ToString(), sessionId });
 });

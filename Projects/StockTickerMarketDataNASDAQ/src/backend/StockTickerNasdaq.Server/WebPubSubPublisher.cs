@@ -36,7 +36,10 @@ public sealed class WebPubSubPublisher
     public WebPubSubPublisher(DeploymentOptions deployment)
     {
         _deployment = deployment;
-        _client = new WebPubSubServiceClient(deployment.WebPubSubConnectionString, deployment.WebPubSubHub);
+        // No SDK retries: a refused publish (for example, the message limit) fails at once, and the broadcaster backs off.
+        var options = new WebPubSubServiceClientOptions();
+        options.Retry.MaxRetries = 0;
+        _client = new WebPubSubServiceClient(deployment.WebPubSubConnectionString, deployment.WebPubSubHub, options);
     }
 
     private sealed class CloudSession
