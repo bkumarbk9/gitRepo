@@ -1,6 +1,6 @@
-# StockTicker NASDAQ
+# Stock Ticker with Risk, Microstructure and Technical Analytics
 
-**Live stock prices in the browser, for about 7,000 NASDAQ common stocks.**
+**Live stock prices in the browser for about 7,000 NASDAQ common stocks, with risk, microstructure and technical analytics for each one.**
 
 A real-time dashboard built with **ASP.NET Core on .NET 10** and **Angular 22**. A server simulates prices for every stock in the NASDAQ symbol directories, anchored to 504 days of real daily closes, and streams them to the browser as binary **Protobuf** frames. It runs locally in one step, and in Azure with **Azure Web PubSub**, **Azure Container Apps** and **Azure Static Web Apps**.
 
@@ -29,7 +29,7 @@ The page loads in the browser. Prices come from the Azure server, so allow a few
 ---
 
 ## Table of contents
-- [StockTicker NASDAQ](#stockticker-nasdaq)
+- [Stock Ticker with Risk, Microstructure and Technical Analytics](#stock-ticker-with-risk-microstructure-and-technical-analytics)
   - [Table of contents](#table-of-contents)
   - [Sample results](#sample-results)
   - [Features](#features)
