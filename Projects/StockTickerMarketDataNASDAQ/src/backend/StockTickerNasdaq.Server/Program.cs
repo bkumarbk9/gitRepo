@@ -34,12 +34,20 @@ MarketHistory history = await LoadHistoryAsync(deployment);
 HistoricalAnalytics analytics = new(history);
 FeedOptions feed = builder.Configuration.GetSection("Feed").Get<FeedOptions>() ?? new FeedOptions();
 feed.Validate();
-builder.WebHost.UseUrls(options.Urls);
+// Listen address from the profile file (Server:Urls). Local: 127.0.0.1:5090. Azure: 0.0.0.0:8080 inside the container.
+builder.WebHost.UseUrls(builder.Configuration["Server:Urls"] ?? "http://127.0.0.1:5090");
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
 
 builder.Services.AddSingleton(options);
 builder.Services.AddSingleton(deployment);
+if (!deployment.IsLocal) builder.Services.AddSingleton<WebPubSubPublisher>();
+// Browsers on the Static Web App call this server from another origin. Only the origins listed in config are allowed.
+string[] allowedOrigins = builder.Configuration.GetSection("Server:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
+if (allowedOrigins.Length > 0)
+{
+    builder.Services.AddCors(cors => cors.AddDefaultPolicy(policy => policy.WithOrigins(allowedOrigins).AllowAnyHeader().AllowAnyMethod()));
+}
 builder.Services.AddSingleton(feed);
 builder.Services.Configure<FeedOptions>(builder.Configuration.GetSection("Feed"));
 builder.Services.AddHostedService<EndOfDayService>();
@@ -55,6 +63,7 @@ builder.Services.AddHostedService<BroadcastService>();
 
 WebApplication app = builder.Build();
 app.UseWebSockets();
+if (allowedOrigins.Length > 0) app.UseCors();
 
 UniverseCatalog catalog = app.Services.GetRequiredService<UniverseCatalog>();
 Console.WriteLine("Loading the NASDAQ stock universe...");
@@ -79,6 +88,31 @@ app.MapGet("/api/universe", (UniverseCatalog universe, string? q, int? page, int
 
 app.MapGet("/api/status", (FeedStatus status, Broadcaster broadcaster, UniverseCatalog universe) =>
     Results.Ok(status.Snapshot(universe.Count, broadcaster.Clients.Count, broadcaster.DemandedTickers().Count)));
+
+// Web PubSub transport: opens a session and returns the URL that lets the browser join the market group. The session
+// ends after Feed:SessionMinutes (read now, so a change applies to browsers that connect after it). Local: not found.
+app.MapGet("/api/negotiate", ([Microsoft.AspNetCore.Mvc.FromServices] WebPubSubPublisher? publisher, IOptionsMonitor<FeedOptions> feedMonitor) =>
+{
+    if (publisher is null) return Results.NotFound();
+    string sessionId = publisher.OpenSession((int)Math.Round(feedMonitor.CurrentValue.SessionMinutes));
+    return Results.Ok(new { url = publisher.ClientUrl(sessionId).ToString(), sessionId });
+});
+
+// Web PubSub transport: the browser's picks, for the session in the X-Session-Id header. Local: not found.
+app.MapPost("/api/picks", async (HttpContext context, [Microsoft.AspNetCore.Mvc.FromServices] WebPubSubPublisher? publisher, UniverseCatalog universe, ServerOptions settings) =>
+{
+    if (publisher is null) return Results.NotFound();
+    string? sessionId = context.Request.Headers["X-Session-Id"];
+    PicksBody? body = await context.Request.ReadFromJsonAsync<PicksBody>();
+    var tickers = (body?.Picks ?? Array.Empty<string>())
+        .Where(t => !string.IsNullOrWhiteSpace(t))
+        .Select(t => t.Trim().ToUpperInvariant())
+        .Where(universe.Contains)
+        .Distinct()
+        .Take(settings.MaxPicks)
+        .ToList();
+    return sessionId is not null && publisher.SetPicks(sessionId, tickers) ? Results.NoContent() : Results.NotFound();
+});
 
 // The protobuf schema, so the browser decodes frames from the same file the server encodes them with.
 app.MapGet("/proto/market.proto", () =>

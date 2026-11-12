@@ -20,8 +20,6 @@ namespace StockTickerNasdaq.Server;
 // Settings from environment variables. Defaults are for local testing.
 public sealed class ServerOptions
 {
-    public string Urls { get; init; } = "http://127.0.0.1:5090";
-
     // Symbol directory sources: https URLs or local file paths. Merged in order; the first listing of a ticker wins.
     public IReadOnlyList<string> UniverseSources { get; init; } = StockTickerNasdaq.Universe.NasdaqUniverse.DefaultSources;
 
@@ -62,7 +60,6 @@ public sealed class ServerOptions
     {
         return new ServerOptions
         {
-            Urls = Text("STOCKTICKER_URLS") ?? "http://127.0.0.1:5090",
             UniverseSources = Text("UNIVERSE_SOURCES") is { } list
                 ? list.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
                 : StockTickerNasdaq.Universe.NasdaqUniverse.DefaultSources,

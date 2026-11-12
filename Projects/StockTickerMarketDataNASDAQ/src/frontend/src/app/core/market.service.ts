@@ -15,15 +15,22 @@
 
 import { Injectable, signal } from '@angular/core';
 import * as protobuf from 'protobufjs';
+import { WebPubSubClient } from '@azure/web-pubsub-client';
 import { WIRE_CODES } from './market.model';
+import { environment } from '../../environments/environment';
 
-// The websocket to the server. The server pushes one binary protobuf frame every 500 ms; the schema comes from
-// /proto/market.proto, the same file the server encodes with. The browser sends its picks and a ping as JSON, and
-// drops out after 30 seconds of silence. The server drops a browser that stays silent for three minutes.
+// The live feed has two transports, chosen by environment.transport (the config file for the build):
+//  - 'local': a websocket to this server's /ws. The server sends one binary protobuf frame every 500 ms, a JSON ping
+//    keeps the socket alive, and the server sends control messages as text.
+//  - 'web-pubsub': an Azure Web PubSub group. The server opens a session (/api/negotiate), and the browser sends its
+//    picks to /api/picks with the session id. Each group message starts with a kind byte: 0 = delta, 1 = snapshot.
+// In both, the schema comes from /proto/market.proto, the same file the server encodes with.
 export const MAX_PICKS = 100;
 const PING_MS = 30_000;
 const MIN_RETRY_MS = 1_000;
 const MAX_RETRY_MS = 15_000;
+const KIND_DELTA = 0;
+const KIND_SNAPSHOT = 1;
 // Fields whose rise or fall is colour-coded: last trade, bid and ask.
 const PRICE_FIELDS = new Set(['p', 'b', 'a']);
 export const PICKS_KEY = "nasdaq.picks";
@@ -55,6 +62,8 @@ export class MarketService {
   readonly lastUpdate = signal<number | null>(null);
 
   private socket: WebSocket | null = null;
+  private cloud: WebPubSubClient | null = null;
+  private sessionId: string | null = null;
   private frameType: protobuf.Type | null = null;
   private pingTimer: ReturnType<typeof setInterval> | null = null;
   private retryTimer: ReturnType<typeof setTimeout> | null = null;
@@ -63,7 +72,8 @@ export class MarketService {
   private paused = false;
   // From the server (Feed:PauseWhenHidden): stop ticking while the tab is hidden. Set by the server only.
   readonly pauseWhenHidden = signal(true);
-  // Set by the server at end of day. The page then shows "Refresh to go live" and stays disconnected.
+  // Set by the server at end of day, and when a cloud session ends. The page then shows "Refresh to go live" and stays
+  // disconnected. A refresh starts a new session.
   readonly endOfDay = signal(false);
 
   // Per connection: the symbol of each ticker id, and the last value received for each id and field. The server
@@ -76,7 +86,7 @@ export class MarketService {
     this.started = true;
     document.addEventListener("visibilitychange", () => this.onVisibilityChange());
     this.picks.set(this.loadPicks());
-    const root = await protobuf.load('/proto/market.proto');
+    const root = await protobuf.load(`${environment.apiBase}/proto/market.proto`);
     this.frameType = root.lookupType('market.Frame');
     this.open();
   }
@@ -111,6 +121,10 @@ export class MarketService {
 
   // Every change sends the whole state, so the server always has both lists.
   private sendState(): void {
+    if (environment.transport === 'web-pubsub') {
+      void this.sendPicks();
+      return;
+    }
     this.send({ pick: this.picks(), view: this.view() });
   }
 
@@ -135,6 +149,10 @@ export class MarketService {
 
   private open(): void {
     if (this.paused || this.endOfDay()) return;
+    if (environment.transport === 'web-pubsub') {
+      void this.openCloud();
+      return;
+    }
     const scheme = location.protocol === 'https:' ? 'wss' : 'ws';
     const socket = new WebSocket(`${scheme}://${location.host}/ws`);
     socket.binaryType = 'arraybuffer';
@@ -170,13 +188,86 @@ export class MarketService {
     };
   }
 
-  // Server control messages. Only the end-of-day message exists.
+  // Cloud: opens a session, then joins the group. A failed negotiate is retried, as the socket is.
+  private async openCloud(): Promise<void> {
+    try {
+      const response = await fetch(`${environment.apiBase}/api/negotiate`);
+      if (!response.ok) throw new Error(`negotiate failed: ${response.status}`);
+      const { url, sessionId } = (await response.json()) as { url: string; sessionId: string };
+      if (this.paused || this.endOfDay()) return;
+
+      this.sessionId = sessionId;
+      // autoReconnect is off on purpose: a reconnect would open a new session and restart the session limit.
+      const client = new WebPubSubClient(url, { autoReconnect: false });
+      this.cloud = client;
+
+      client.on('connected', () => {
+        this.connected.set(true);
+        this.retryMs = MIN_RETRY_MS;
+        this.symbolById = new Map();
+        this.baseById = new Map();
+        client.joinGroup(environment.group).catch(() => this.stopCloud());
+        void this.sendPicks();
+      });
+      client.on('group-message', (event) => {
+        const message = event.message;
+        if (message.dataType === 'binary' && message.data instanceof ArrayBuffer) {
+          this.applyEnvelope(new Uint8Array(message.data));
+        } else if (message.dataType === 'text' && typeof message.data === 'string') {
+          this.handleControl(message.data);
+        }
+      });
+      client.on('disconnected', () => this.onCloudClosed(client));
+
+      await client.start();
+    } catch {
+      this.retryLater();
+    }
+  }
+
+  // The server closed the session (its time is up) or the network dropped. Either way, a refresh starts a new session.
+  // The page does not reconnect by itself, because a new session would restart the session limit.
+  private onCloudClosed(client: WebPubSubClient): void {
+    if (client !== this.cloud) return;
+    this.cloud = null;
+    this.connected.set(false);
+    this.endOfDay.set(true);
+  }
+
+  private stopCloud(): void {
+    const client = this.cloud;
+    this.cloud = null;
+    client?.stop();
+  }
+
+  private retryLater(): void {
+    if (this.paused || this.endOfDay()) return;
+    this.retryTimer = setTimeout(() => this.open(), this.retryMs);
+    this.retryMs = Math.min(this.retryMs * 2, MAX_RETRY_MS);
+  }
+
+  // Sends the picks for this cloud session. The server ignores them if the session has ended.
+  private async sendPicks(): Promise<void> {
+    if (this.sessionId === null) return;
+    try {
+      await fetch(`${environment.apiBase}/api/picks`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Session-Id': this.sessionId },
+        body: JSON.stringify({ picks: this.picks() }),
+      });
+    } catch {
+      // Not sent; the next change of picks sends them again.
+    }
+  }
+
+  // Server control messages: end of day, and the pause setting.
   private handleControl(text: string): void {
     try {
       const msg = JSON.parse(text) as { control?: string };
       if (msg.control === "endOfDay") {
         this.endOfDay.set(true);
         this.clearRetry();
+        this.stopCloud();
       } else if (msg.control === "config") {
         this.pauseWhenHidden.set((msg as { pauseWhenHidden?: boolean }).pauseWhenHidden !== false);
       }
@@ -197,6 +288,7 @@ export class MarketService {
     this.paused = true;
     this.clearRetry();
     this.socket?.close();
+    this.stopCloud();
   }
 
   private resume(): void {
@@ -213,6 +305,18 @@ export class MarketService {
     if (this.socket?.readyState === WebSocket.OPEN) {
       this.socket.send(JSON.stringify(payload));
     }
+  }
+
+  // A cloud group message: one kind byte, then the protobuf frame. A snapshot resets the baseline, so a browser that
+  // joined late starts from the current values. Deltas for tickers it has not been told about are skipped.
+  private applyEnvelope(bytes: Uint8Array): void {
+    if (bytes[0] === KIND_SNAPSHOT) {
+      this.symbolById = new Map();
+      this.baseById = new Map();
+    } else if (bytes[0] !== KIND_DELTA) {
+      return;
+    }
+    this.applyFrame(bytes.subarray(1));
   }
 
   private applyFrame(bytes: Uint8Array): void {

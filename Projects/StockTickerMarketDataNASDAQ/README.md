@@ -84,7 +84,6 @@ Server settings (environment variables):
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `STOCKTICKER_URLS` | `http://127.0.0.1:5090` | Address the server listens on. |
 | `SIM_REAL_SECONDS_PER_MINUTE` | `5` | Real seconds per simulated minute. `5` gives a 390-minute session in about 33 minutes. Use `1` for fast runs. |
 | `SIM_SEED` | random | Seed for the simulated prices. Set it to repeat a run. |
 | `MAX_PICKS` | `100` | Most stocks one browser can pick. |

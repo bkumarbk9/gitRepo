@@ -8,5 +8,6 @@ TestResults/
 # Downloaded universe cache
 universe-cache/
 
-# Price history file (about 14 MB). Attach it to a GitHub Release instead of committing it.
-data/market_history.bin
+# Downloaded price history cache (azure profile)
+history-cache/
+

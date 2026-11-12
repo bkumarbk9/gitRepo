@@ -67,7 +67,8 @@ public sealed class SimulationService : BackgroundService
 
     private async Task RunAsync(SimulatedMarket market, double simSecondsPerRealSecond, CancellationToken stoppingToken)
     {
-        using var timer = new PeriodicTimer(BroadcastService.Interval);
+        // The simulation steps every 500 ms. The publish rate (Deployment:PublishIntervalMs) is separate.
+        using var timer = new PeriodicTimer(TimeSpan.FromMilliseconds(500));
         var clock = Stopwatch.StartNew();
         double lastSeconds = 0;
         while (await timer.WaitForNextTickAsync(stoppingToken))

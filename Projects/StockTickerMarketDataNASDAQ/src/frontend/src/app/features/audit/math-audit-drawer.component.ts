@@ -20,6 +20,7 @@ import { AuditApi } from '../../core/audit.api';
 import { AuditPayload } from '../../core/audit.model';
 import { ViewportService } from '../../core/viewport.service';
 import { AuditCardComponent } from './audit-card.component';
+import { environment } from '../../../environments/environment';
 
 // Chart box sizes, in SVG units. The backend gives every position as 0..1 of the box; these only stretch them.
 const HIST_W = 600;
@@ -62,7 +63,7 @@ const PRICE_H = 220;
             @for (card of p.intraday.cards; track card.name) {
               <app-audit-card [card]="card" [focused]="focus()" />
             }
-            <a class="csv" [href]="p.intraday.csvUrl" download>Download intraday CSV</a>
+            <a class="csv" [href]="apiBase + p.intraday.csvUrl" download>Download intraday CSV</a>
           </section>
 
           <!-- Section 2: the 504-day history baseline. -->
@@ -129,7 +130,7 @@ const PRICE_H = 220;
                 }
               </ul>
             </details>
-            <a class="csv" [href]="p.historical.csvUrl" download>Download 504-day CSV</a>
+            <a class="csv" [href]="apiBase + p.historical.csvUrl" download>Download 504-day CSV</a>
           </section>
         } @else {
           <p class="muted">Loading the audit…</p>
@@ -180,6 +181,8 @@ export class MathAuditDrawerComponent {
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
   protected readonly viewport = inject(ViewportService);
+  // Prefix for the CSV links, which the server builds as /api paths.
+  protected readonly apiBase = environment.apiBase;
   private readonly api = inject(AuditApi);
   protected readonly payload = signal<AuditPayload | null>(null);
   protected readonly error = signal<string | null>(null);

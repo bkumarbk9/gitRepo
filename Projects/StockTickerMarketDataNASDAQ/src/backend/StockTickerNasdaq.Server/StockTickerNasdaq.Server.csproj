@@ -19,4 +19,8 @@
     <EmbeddedResource Include="..\StockTickerNasdaq.Market\Protos\market.proto" LogicalName="market.proto" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="Azure.Messaging.WebPubSub" Version="1.7.0" />
+  </ItemGroup>
+
 </Project>

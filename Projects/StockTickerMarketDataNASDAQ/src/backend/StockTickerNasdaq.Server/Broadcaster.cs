@@ -203,12 +203,18 @@ public sealed class Broadcaster
     private readonly List<ClientSession> _clients = new();
 
     private readonly FeedOptions _feed;
+    private readonly DeploymentOptions _deployment;
+    private readonly WebPubSubPublisher? _publisher;
     private readonly SharedStream _shared;
+    private long _lastSnapshotMs = long.MinValue;
+    private static readonly long SnapshotEveryMs = 30_000;
 
-    public Broadcaster(QuoteBook book, FeedOptions feed)
+    public Broadcaster(QuoteBook book, FeedOptions feed, DeploymentOptions deployment, WebPubSubPublisher? publisher = null)
     {
         _book = book;
         _feed = feed;
+        _deployment = deployment;
+        _publisher = publisher;
         _shared = new SharedStream(book);
     }
 
@@ -242,6 +248,18 @@ public sealed class Broadcaster
     // reconnects them.
     public async Task EndOfDayAsync()
     {
+        if (_publisher is not null)
+        {
+            try
+            {
+                await _publisher.SendControlAsync("{\"control\":\"endOfDay\"}");
+            }
+            catch (Exception)
+            {
+                // Publishing failed (for example, quota). The browsers stop when they refresh.
+            }
+        }
+
         foreach (ClientSession client in Clients)
         {
             try
@@ -265,6 +283,15 @@ public sealed class Broadcaster
     {
         var seen = new HashSet<string>(StringComparer.Ordinal);
         var result = new List<string>();
+        // In the cloud, browsers do not connect to this server. The popular list is always streamed, plus the picks
+        // of every open browser session.
+        if (_publisher is not null)
+        {
+            foreach (string ticker in PopularStocks.Tickers.Concat(_publisher.ActiveTickers()))
+            {
+                if (seen.Add(ticker)) result.Add(ticker);
+            }
+        }
         foreach (ClientSession client in Clients)
         {
             foreach (string ticker in client.Streamed)
@@ -278,12 +305,42 @@ public sealed class Broadcaster
     // Sends one frame to each browser that has something new. A browser that cannot receive is removed.
     public async Task BroadcastOnceAsync(long nowMs)
     {
+        if (_publisher is not null)
+        {
+            await BroadcastToGroupAsync(_publisher, nowMs);
+            return;
+        }
         if (_feed.IsShared)
         {
             await BroadcastSharedAsync(nowMs);
             return;
         }
         await BroadcastPerSessionAsync(nowMs);
+    }
+
+    // Web PubSub: one frame to the group. Every SnapshotEveryMs a snapshot and the config go too, so a browser that
+    // joins late catches up within that time. A failed publish is logged and the next tick tries again.
+    private async Task BroadcastToGroupAsync(WebPubSubPublisher publisher, long nowMs)
+    {
+        try
+        {
+            // Closes sessions whose time is up before this frame goes out. Their picks drop out of the demand below.
+            await publisher.SweepAsync();
+            _shared.SetTickers(DemandedTickers());
+            byte[]? frame = _shared.BuildBroadcast(nowMs);
+            if (frame is not null) await publisher.SendFrameAsync(WebPubSubPublisher.Delta, frame);
+
+            if (nowMs - _lastSnapshotMs >= SnapshotEveryMs)
+            {
+                _lastSnapshotMs = nowMs;
+                await publisher.SendControlAsync("{\"control\":\"config\",\"pauseWhenHidden\":" + (_feed.PauseWhenHidden ? "true" : "false") + "}");
+                await publisher.SendFrameAsync(WebPubSubPublisher.Snapshot, _shared.BuildSnapshot(nowMs));
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Web PubSub publish failed: {ex.Message}");
+        }
     }
 
     // Shared mode: one frame for everyone. A browser that has just joined gets a snapshot instead of the frame.
@@ -345,18 +402,18 @@ public sealed class Broadcaster
 // Sends the broadcaster's frames every interval and removes browsers that have been silent for too long.
 public sealed class BroadcastService : BackgroundService
 {
-    public static readonly TimeSpan Interval = TimeSpan.FromMilliseconds(500);
-
     private readonly Broadcaster _broadcaster;
+    private readonly TimeSpan _interval;
 
-    public BroadcastService(Broadcaster broadcaster)
+    public BroadcastService(Broadcaster broadcaster, DeploymentOptions deployment)
     {
         _broadcaster = broadcaster;
+        _interval = TimeSpan.FromMilliseconds(deployment.PublishIntervalMs);
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        using var timer = new PeriodicTimer(Interval);
+        using var timer = new PeriodicTimer(_interval);
         while (await timer.WaitForNextTickAsync(stoppingToken))
         {
             await _broadcaster.BroadcastOnceAsync(DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());

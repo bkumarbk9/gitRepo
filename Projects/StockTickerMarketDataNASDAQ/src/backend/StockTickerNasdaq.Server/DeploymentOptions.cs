@@ -38,13 +38,18 @@ public sealed class DeploymentOptions
     public int WebPubSubTokenMinutes { get; set; } = 10;
     public string WebPubSubConnectionString { get; set; } = "";
 
+    // How often the server publishes a frame to the group. Each publish counts against the Web PubSub quota.
+    public int PublishIntervalMs { get; set; } = 500;
+
     public bool IsLocal => string.Equals(Transport, "local", StringComparison.OrdinalIgnoreCase);
 
     public void Validate()
     {
         if (!IsLocal && !string.Equals(Transport, "web-pubsub", StringComparison.OrdinalIgnoreCase))
             throw new InvalidOperationException($"Deployment:Transport must be \"local\" or \"web-pubsub\", not \"{Transport}\".");
-        if (!IsLocal)
-            throw new NotSupportedException("Deployment:Transport \"web-pubsub\" is not built yet. Use the local profile for now.");
+        if (PublishIntervalMs < 100)
+            throw new InvalidOperationException($"Deployment:PublishIntervalMs must be at least 100, not {PublishIntervalMs}.");
+        if (!IsLocal && string.IsNullOrWhiteSpace(WebPubSubConnectionString))
+            throw new InvalidOperationException("Deployment:WebPubSubConnectionString is empty. Set Deployment__WebPubSubConnectionString in the environment (a secret in Container Apps).");
     }
 }
