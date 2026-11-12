@@ -226,10 +226,14 @@ export class MarketService {
           }
         });
       });
-      client.on('disconnected', () => this.onCloudClosed(client));
+      client.on('disconnected', (event) => {
+        console.warn('Cloud connection closed:', event.message ?? '(no reason)');
+        this.onCloudClosed(client);
+      });
 
       await client.start();
-    } catch {
+    } catch (error) {
+      console.error('Cloud connection failed:', error);
       this.retryLater();
     }
   }
