@@ -4,6 +4,18 @@ Live stock prices in the browser, for the NASDAQ common-stock universe. **Prices
 
 **Status:** local end-to-end flow with simulated prices, anchored to the history file. Azure Web PubSub replaces the local websocket later; the message format stays the same.
 
+**Try me:** <a href="https://ambitious-moss-00a67b20f.4.azurestaticapps.net/" target="_blank">https://ambitious-moss-00a67b20f.4.azurestaticapps.net/</a>
+
+![Popular tab with live prices](docs/stockticker-popular.gif)
+
+![Calculations behind the Watch values](docs/Calculations.jpg)
+
+![Watch tab filling with live prices](docs/stockticker-watch.gif)
+
+
+
+
+
 ## Flow
 
 1. **Universe.** The NASDAQ Trader symbol directories (`nasdaqlisted.txt` and `otherlisted.txt`) give the list of common stocks. ETFs and test issues are dropped. Sources: <https://www.nasdaqtrader.com/trader.aspx?id=symboldirdefs>.

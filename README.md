@@ -10,6 +10,7 @@ Free demo projects that show how to use different technologies, from cloud AI se
 | [Bonjour in WPF](Projects/BonjourInWPF) | Desktop, networking | C#, WPF, .NET Framework 4.8, MVVM, Zeroconf, Telerik UI for WPF | AGPL-3.0 |
 | [SPSC Ring Buffer](Projects/SPSC_HFT_RingBuffer) | Low latency, shared memory | C++20, C# .NET 10, POSIX shared memory, mmap, Linux x86_64 | AGPL-3.0 |
 | [Cholesky Market Stream](Projects/cholesky-market-stream) | Quant simulation, binary data | C++20, CMake, Cholesky decomposition, 12-factor model, GoogleTest | AGPL-3.0 |
+| [StockTicker NASDAQ](Projects/StockTickerMarketDataNASDAQ) | Real-time web, market simulation | C#, .NET 10, Protobuf, Angular 22, Azure Web PubSub, Azure Container Apps, Azure Static Web Apps | AGPL-3.0 |
 
 **Prototypes**: earlier experiments, kept as originally published and not maintained. Some have grown into the projects above.
 
@@ -71,6 +72,13 @@ A header-only, lock-free single-producer / single-consumer ring buffer in **POSI
 📁 [`Projects/cholesky-market-stream`](Projects/cholesky-market-stream)
 
 A C++20 simulator of correlated daily stock prices for 8,000 stocks over 504 trading days. Correlation comes from a dense Cholesky decomposition for small baskets, and a 12-factor sector model (market plus eleven sectors, O(N·K)) at full scale. The result is a 15.5 MiB binary file, `MKTSIM01`, with a documented layout and readers in Node.js and C#, plus per-stock risk metrics (volatility, VaR, beta, Sharpe, drawdown, 52-week range and regime). Only the standard library is used for the maths; GoogleTest is the test dependency. Protobuf streaming and the Azure Web PubSub publisher are the next stages.
+
+## StockTicker NASDAQ
+📁 [`Projects/StockTickerMarketDataNASDAQ`](Projects/StockTickerMarketDataNASDAQ)
+
+A real-time browser app that streams simulated prices for about 7,000 NASDAQ stocks. Prices come from a simulator that uses 504 days of daily closes from the Cholesky Market Stream project. The server sends one binary **Protobuf** frame every 500 ms, and the Angular 22 frontend shows the Universe, Popular, and Watch tables, plus a math audit for each stock.
+
+It runs locally in one step: the server uses a plain WebSocket, and the frontend proxies to it. For Azure, the server runs on **Azure Container Apps**, prices are sent through **Azure Web PubSub**, and the frontend and the history file are on **Azure Static Web Apps**. A profile file (`appsettings.local.json` or `appsettings.azure.json`) selects the mode, and no secrets are stored in files. The project README has the setup details.
 
 ---
 
