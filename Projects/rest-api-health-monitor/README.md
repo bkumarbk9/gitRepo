@@ -25,6 +25,7 @@ Hosted on **Azure Static Web Apps** (Free tier), so it loads instantly with no w
 
 ## Table of contents
 - [Features](#features)
+- [Technologies used](#technologies-used)
 - [Getting started](#getting-started)
 - [Configuring endpoints](#configuring-endpoints)
 - [The mock test endpoint](#the-mock-test-endpoint)
@@ -46,6 +47,18 @@ Hosted on **Azure Static Web Apps** (Free tier), so it loads instantly with no w
 - **JSON configuration**: endpoints live in `public/endpoints.json` and are loaded at runtime.
 - **Built-in test endpoint**: endpoint `1` randomly hits [httpbin.org](https://httpbin.org) success, failure and slow routes so you can see every chart state.
 - **Debug logging**: levelled, tagged console logging that you can turn up at runtime without redeploying.
+
+## Technologies used
+
+| Area | Technology |
+|---|---|
+| Framework | **Angular 22** with signals for the state of each endpoint |
+| Language | **TypeScript 6.0** |
+| Checks | Browser **`fetch`** with a 10 s timeout; `no-cors` mode for sites that do not allow cross-origin reads |
+| Configuration | **JSON** file (`public/endpoints.json`), loaded at runtime |
+| Logging | Levelled, tagged console logger, with a log history kept in memory |
+| Tests | **Vitest 5** |
+| Hosting | **Azure Static Web Apps** (Free tier), serving the static build |
 
 ## Getting started
 

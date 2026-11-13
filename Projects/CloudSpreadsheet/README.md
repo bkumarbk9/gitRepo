@@ -11,6 +11,7 @@ A real-time, collaborative spreadsheet in the browser, like a small Google Sheet
 
 ## Contents
 - [Features](#features)
+- [Technologies used](#technologies-used)
 - [Formulas](#formulas)
 - [Run it locally](#run-it-locally)
 - [Configuration](#configuration)
@@ -29,6 +30,19 @@ A real-time, collaborative spreadsheet in the browser, like a small Google Sheet
 - **Idle disconnect.** After 30 minutes without use the page disconnects, so a forgotten tab doesn't keep the server running. **Reconnect** picks up where you left off, including an edit you had started.
 - **Recovers from dropped connections.** The page reconnects by itself with backoff when the network drops.
 - **Light and dark themes**, following your system setting.
+
+## Technologies used
+
+| Area | Technology |
+|---|---|
+| Language and runtime | **C# 14** on **.NET 10**, ASP.NET Core |
+| Real-time transport | **WebSockets** (`/ws?sheet=name`): a snapshot on connect, then changed cells |
+| Browser client | **Plain JavaScript**, HTML and CSS (`wwwroot`), with no framework |
+| Formula engine | Written in the project, with **muParser 2015**-style function names and Excel-style cell references |
+| Storage | **JSON files** on disk, saved by a background service |
+| Security | Strict **Content Security Policy**; WebSocket limited to the app's own site |
+| Hosting | **Azure Container Apps**, image built with **.NET SDK container publish** (no Dockerfile) |
+| Tests | **MSTest** 3.10.4 with **Microsoft.AspNetCore.Mvc.Testing** (the real app in memory) |
 
 ## Formulas
 ![The sample stock sheet: Quantity, LS and Price columns, a Position column calculated by a column formula, and a Total row using =SUM(C2:C7) shown in the formula bar](doc/img/screenshot.png)

@@ -31,6 +31,18 @@ In many ways, this kind of browsing is even more powerful for applications than 
 
 > The ready-to-run files in `DemoBinaries` were built before the V1.1 fixes below. Build from source for the latest version.
 
+## Technologies used
+
+| Area | Technology |
+|---|---|
+| Language and runtime | **C#** on **.NET Framework 4.8** |
+| UI | **WPF** with **Telerik UI for WPF** (R1 2020) controls |
+| Pattern | **MVVM**, split into View, ViewModel and Model projects |
+| Discovery | **mDNS / Bonjour** through the **Zeroconf** NuGet package 3.3.16 |
+| Logging | **NLog** 4.7.0 |
+| Tests | **MSTest** 3.6.4 with Microsoft.NET.Test.Sdk, run in Test Explorer or with `dotnet test` |
+| Build | **Visual Studio 2022** or later, MSBuild, NuGet package restore |
+
 ## Building from source
 
 **Prerequisites**
